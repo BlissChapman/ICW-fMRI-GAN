@@ -41,7 +41,6 @@ TRAINING_STEPS = 200000
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
 VISUALIZATION_INTERVAL = 1000
-NOISE_SAMPLE_LENGTH = 128
 
 description_f = open(args.output_dir + '/classifier_training_config.txt', 'w')
 description_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
@@ -50,7 +49,6 @@ description_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
 description_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
 description_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
 description_f.write('VISUALIZATION_INTERVAL: {0}\n'.format(VISUALIZATION_INTERVAL))
-description_f.write('NOISE_SAMPLE_LENGTH: {0}\n'.format(NOISE_SAMPLE_LENGTH))
 description_f.close()
 
 # ========== DATA ==========
@@ -59,11 +57,6 @@ brainpedia = Brainpedia(data_dirs=[args.data_dir],
                         cache_dir='data/real_data_cache/',
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
-
-# Create real data tensors:
-test_brain_data_v = Variable(torch.Tensor(test_brain_data))
-if CUDA:
-    test_brain_data_v = test_brain_data_v.cuda()
 
 # Build real data generator:
 train_generator = brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
@@ -89,7 +82,9 @@ synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
 
 
 def compute_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
-    total_tests = len(brain_data_tags)
+    brain_data = Variable(torch.Tensor(brain_data))
+    if CUDA:
+        brain_data = brain_data.CUDA()
 
     # Generate predictions on test set:
     nn_classifier_predictions = nn_classifier.forward(brain_data)
@@ -98,6 +93,7 @@ def compute_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_d
     np.random.shuffle(random_guesses)
 
     # Count number of correct predictions:
+    total_tests = len(brain_data_tags)
     num_nn_classifier_correct = 0
     num_synthetic_nn_classifier_correct = 0
     num_rand_guesses_correct = 0
@@ -160,7 +156,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data_v, test_brain_data_tags)
+        nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data, test_brain_data_tags)
         nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
         synthetic_nn_classifier_test_acc_per_vis_interval.append(nn_test_synthetic_accuracy)
 
