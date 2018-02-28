@@ -43,14 +43,13 @@ MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
 VISUALIZATION_INTERVAL = 1000
 
-description_f = open(args.output_dir + '/classifier_training_config.txt', 'w')
-description_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
-description_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
-description_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
-description_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
-description_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
-description_f.write('VISUALIZATION_INTERVAL: {0}\n'.format(VISUALIZATION_INTERVAL))
-description_f.close()
+results_f = open(args.output_dir + '/results.txt', 'w')
+results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
+results_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
+results_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
+results_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
+results_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
+results_f.write('VISUALIZATION_INTERVAL: {0}\n\n\n'.format(VISUALIZATION_INTERVAL))
 
 # ========== DATA ==========
 # Real data:
@@ -75,6 +74,7 @@ synthetic_brain_data_shape, synthetic_brain_data_tag_shape = synthetic_brainpedi
 
 
 # ========== SVMs ==========
+results_f.write('===================== [SVM] ====================\n')
 svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 synthetic_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 
@@ -89,18 +89,24 @@ flattened_synthetic_all_brain_data = synthetic_all_brain_data.reshape(synthetic_
 flattened_synthetic_all_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags])
 
 # Train:
+print("Training SVMs...")
 svm_classifier.fit(flattened_train_brain_data, flattened_train_brain_data_tags)
 synthetic_svm_classifier.fit(flattened_synthetic_all_brain_data, flattened_synthetic_all_brain_data_tags)
 
 # Compute accuracy:
+print("Evaluating SVMs...")
 svm_classifier_score = svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
 synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
 
-print("SVM CLASSIFIER SCORE: ", svm_classifier_score)
-print("SYNTHETIC SVM CLASSIFIER SCORE: ", synthetic_svm_classifier_score)
+# Save SVM results:
+print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100*svm_classifier_score))
+print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100*synthetic_svm_classifier_score))
+results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100*svm_classifier_score))
+results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n\n".format(100*synthetic_svm_classifier_score))
 
 
-# ========== MODELS ==========
+# ========== NEURAL NETWORKS ==========
+results_f.write('===================== [Neural Networks] ====================\n')
 nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                            num_classes=brain_data_tag_shape[0],
                            cudaEnabled=CUDA)
@@ -216,3 +222,11 @@ for training_step in range(1, TRAINING_STEPS + 1):
         # Save model at checkpoint
         torch.save(nn_classifier.state_dict(), "{0}/nn_classifier".format(args.output_dir))
         torch.save(synthetic_nn_classifier.state_dict(), "{0}/synthetic_nn_classifier".format(args.output_dir))
+
+
+# Svae final classifier results to results_f:
+results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * nn_test_accuracy))
+results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * nn_test_synthetic_accuracy))
+results_f.write("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%\n".format(100.0 * random_test_accuracy))
+results_f.write("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
+results_f.close()
