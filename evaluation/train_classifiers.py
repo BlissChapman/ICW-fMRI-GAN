@@ -129,6 +129,7 @@ synthetic_nn_classifier_loss_per_vis_interval = []
 
 nn_classifier_test_acc_per_vis_interval = []
 synthetic_nn_classifier_test_acc_per_vis_interval = []
+random_classifier_test_acc_per_vis_interval = []
 
 running_nn_classifier_loss = 0.0
 running_synthetic_nn_classifier_loss = 0.0
@@ -159,6 +160,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
         nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data, test_brain_data_tags)
         nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
         synthetic_nn_classifier_test_acc_per_vis_interval.append(nn_test_synthetic_accuracy)
+        random_classifier_test_acc_per_vis_interval.append(random_test_accuracy)
 
         # Logging:
         print("===== TRAINING STEP {0} / {1} =====".format(training_step, TRAINING_STEPS))
@@ -179,8 +181,8 @@ for training_step in range(1, TRAINING_STEPS + 1):
         Plot.plot_histories([nn_classifier_loss_per_vis_interval, synthetic_nn_classifier_loss_per_vis_interval],
                             ['[REAL] Loss', '[REAL+SYNTHETIC] Loss'],
                             "{0}/loss_history".format(args.output_dir))
-        Plot.plot_histories([nn_classifier_test_acc_per_vis_interval, synthetic_nn_classifier_test_acc_per_vis_interval],
-                            ['[REAL] Test Accuracy', '[REAL+SYNTHETIC] Test Accuracy'],
+        Plot.plot_histories([nn_classifier_test_acc_per_vis_interval, synthetic_nn_classifier_test_acc_per_vis_interval, random_classifier_test_acc_per_vis_interval],
+                            ['[REAL] Test Accuracy', '[REAL+SYNTHETIC] Test Accuracy', '[RANDOM] Test Accuracy'],
                             "{0}/accuracy_history".format(args.output_dir))
 
         # Save model at checkpoint
