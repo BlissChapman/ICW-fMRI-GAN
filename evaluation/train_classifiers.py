@@ -84,7 +84,7 @@ synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
 def compute_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
     brain_data = Variable(torch.Tensor(brain_data))
     if CUDA:
-        brain_data = brain_data.CUDA()
+        brain_data = brain_data.cuda()
 
     # Generate predictions on test set:
     nn_classifier_predictions = nn_classifier.forward(brain_data)
