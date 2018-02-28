@@ -38,10 +38,10 @@ shutil.rmtree(args.output_dir, ignore_errors=True)
 os.makedirs(args.output_dir)
 
 DOWNSAMPLE_SCALE = 0.25
-TRAINING_STEPS = 200000
+TRAINING_STEPS = 30
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
-VISUALIZATION_INTERVAL = 1000
+VISUALIZATION_INTERVAL = 5
 
 results_f = open(args.output_dir + '/results.txt', 'w')
 results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
