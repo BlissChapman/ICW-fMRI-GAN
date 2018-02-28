@@ -40,7 +40,7 @@ DOWNSAMPLE_SCALE = 0.25
 TRAINING_STEPS = 200000
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
-VISUALIZATION_INTERVAL = 1000
+VISUALIZATION_INTERVAL = 5
 NOISE_SAMPLE_LENGTH = 128
 
 description_f = open(args.output_dir + '/classifier_training_config.txt', 'w')
@@ -74,7 +74,7 @@ brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 # Augmented data:
 # TODO: Remove test data from augmented brain data set.
 # TODO: Determine if both datasets need to be computed with the same mask.
-augmented_brainpedia = Brainpedia(data_dirs=[args.data_dir, args.augmented_data_dir],
+augmented_brainpedia = Brainpedia(data_dirs=[args.augmented_data_dir],
                                   cache_dir='data/augmented_data_cache/',
                                   scale=DOWNSAMPLE_SCALE)
 augmented_all_brain_data, augmented_all_brain_data_tags = augmented_brainpedia.all_data()
