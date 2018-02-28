@@ -61,8 +61,8 @@ brainpedia = Brainpedia(data_dirs=[args.data_dir],
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 
 # Create real data tensors:
-train_brain_data_v = Variable(torch.Tensor(train_brain_data))
-test_brain_data_v = Variable(torch.Tensor(test_brain_data))
+train_brain_data_v = Variable(torch.Tensor(train_brain_data.copy()))
+test_brain_data_v = Variable(torch.Tensor(test_brain_data.copy()))
 if CUDA:
     train_brain_data_v = train_brain_data_v.cuda()
     test_brain_data_v = test_brain_data_v.cuda()

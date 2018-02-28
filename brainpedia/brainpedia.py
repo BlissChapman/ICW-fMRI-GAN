@@ -34,10 +34,10 @@ class Brainpedia:
         epoch_length = len(brain_data_tags)
 
         # Shuffle data
-        rng_state = np.random.get_state()
-        np.random.shuffle(brain_data)
-        np.random.set_state(rng_state)
-        np.random.shuffle(brain_data_tags)
+        # rng_state = np.random.get_state()
+        # np.random.shuffle(brain_data)
+        # np.random.set_state(rng_state)
+        # np.random.shuffle(brain_data_tags)
 
         # Split into training and test sets
         end_train_data_idx = int(epoch_length * (3 / 4))
