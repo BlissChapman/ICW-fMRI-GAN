@@ -19,7 +19,8 @@ from torch.autograd import Variable
 
 
 # ========== OUTPUT DIRECTORIES ==========
-DATA_DIR = 'data/'
+DATA_DIR = 'data/neurovault/collection_1952/'
+CACHE_DIR = 'data/real_data_cache/'
 OUTPUT_DIR = 'train_output/'
 DATA_OUTPUT_DIR = OUTPUT_DIR + 'data/'
 VIS_OUTPUT_DIR = OUTPUT_DIR + 'visualizations/'
@@ -66,8 +67,11 @@ if CUDA:
     torch.cuda.manual_seed(1)
 
 # ========== Data ==========
-brainpedia = Brainpedia(data_dir=DATA_DIR, scale=DOWNSAMPLE_SCALE)
-brainpedia_training_generator = brainpedia.batch_generator(BATCH_SIZE, CUDA)
+brainpedia = Brainpedia(data_dirs=[DATA_DIR],
+                        cache_dir=CACHE_DIR,
+                        scale=DOWNSAMPLE_SCALE)
+all_brain_data, all_brain_data_tags = brainpedia.all_data()
+brainpedia_generator = brainpedia.batch_generator(all_brain_data, all_brain_data_tags, BATCH_SIZE, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 
 # ========== Models ==========
@@ -90,12 +94,12 @@ running_critic_loss = 0.0
 running_generator_loss = 0.0
 running_batch_start_time = timeit.default_timer()
 
-for training_step in range(1, TRAINING_STEPS + 1):
+for training_step in range(1, TRAINING_STEPS+1):
     print("BATCH: [{0}/{1}]\r".format(training_step % VISUALIZATION_INTERVAL, VISUALIZATION_INTERVAL), end='')
 
     # Train critic
     for critic_step in range(CRITIC_UPDATES_PER_GENERATOR_UPDATE):
-        real_brain_img_data_batch, labels_batch = next(brainpedia_training_generator)
+        real_brain_img_data_batch, labels_batch = next(brainpedia_generator)
         real_brain_img_data_batch = Variable(real_brain_img_data_batch)
         labels_batch = Variable(labels_batch)
 
@@ -130,7 +134,9 @@ for training_step in range(1, TRAINING_STEPS + 1):
         running_critic_loss = 0.0
         running_generator_loss = 0.0
 
-        Plot.plot_loss_histories(critic_losses_per_vis_interval, generator_losses_per_vis_interval, "{0}losses".format(MODEL_OUTPUT_DIR))
+        Plot.plot_histories([critic_losses_per_vis_interval, generator_losses_per_vis_interval],
+                            ["Critic", "Generator"],
+                            "{0}losses".format(MODEL_OUTPUT_DIR))
 
         # Save model at checkpoint
         torch.save(generator.state_dict(), "{0}generator".format(MODEL_OUTPUT_DIR))

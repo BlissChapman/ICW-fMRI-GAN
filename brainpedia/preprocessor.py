@@ -14,30 +14,25 @@ class Preprocessor:
     """
 
     def __init__(self,
-                 data_dir,
+                 data_dirs,
+                 output_dir,
                  scale,
                  brain_data_filename,
                  brain_data_mask_filename,
                  brain_data_tags_filename,
                  brain_data_tags_encoding_filename,
-                 brain_data_tags_decoding_filename,
-                 augmented_data_dir=None):
-        self.output_dir = data_dir
-        if augmented_data_dir:
-            self.output_dir += 'augmented_preprocessed/'
-        else:
-            self.output_dir += 'preprocessed/'
+                 brain_data_tags_decoding_filename):
+        self.data_dirs = data_dirs
+        self.output_dir = output_dir
         if not os.path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
 
-        self.data_dir = data_dir
         self.scale = scale
         self.brain_data_path = self.output_dir + brain_data_filename
         self.brain_data_mask_path = self.output_dir + brain_data_mask_filename
         self.brain_data_tags_path = self.output_dir + brain_data_tags_filename
         self.brain_data_tags_encoding_path = self.output_dir + brain_data_tags_encoding_filename
         self.brain_data_tags_decoding_path = self.output_dir + brain_data_tags_decoding_filename
-        self.augmented_data_dir = augmented_data_dir
 
     def brain_data(self):
         if not self.data_is_preprocessed():
@@ -71,6 +66,13 @@ class Preprocessor:
             and os.path.isfile(self.brain_data_tags_encoding_path) \
             and os.path.isfile(self.brain_data_tags_decoding_path)
 
+    def all_data_paths(self):
+        data_paths = []
+        for data_dir in self.data_dirs:
+            for filename in os.listdir(data_dir):
+                data_paths.append(data_dir + filename)
+        return data_paths
+
     def _run(self):
         # NOTE TO FUTURE READERS:
         # This code is extremely memory inefficient.  I am currently working
@@ -88,14 +90,8 @@ class Preprocessor:
         brain_data_tag_encoding_map = {}
         brain_data_tag_decoding_map = {}
 
-        # Retrieve names of all files in data_dir and augmented_data_dir
-        base_dir = self.data_dir + 'neurovault/collection_1952/'
-        collection_filenames = os.listdir(base_dir)
-        collection_filenames = [self.data_dir + 'neurovault/collection_1952/' + filename for filename in collection_filenames]
-
-        if self.augmented_data_dir is not None:
-            for filename in os.listdir(self.augmented_data_dir):
-                collection_filenames.append(self.augmented_data_dir + filename)
+        # Retrieve names of all files in data_dirs
+        collection_filenames = self.all_data_paths()
 
         # Loop over data files:
         total_num_files = len(collection_filenames)
@@ -155,6 +151,7 @@ class Preprocessor:
         brain_data_tags_f = open(self.brain_data_tags_path, 'wb')
         brain_data_tags_encoding_f = open(self.brain_data_tags_encoding_path, 'wb')
         brain_data_tags_decoding_f = open(self.brain_data_tags_decoding_path, 'wb')
+        print("                                                 \r", end='')
 
         pickle.dump(brain_data, brain_data_f)
         pickle.dump(brain_data_mask, brain_data_mask_f)

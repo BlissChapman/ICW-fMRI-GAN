@@ -47,9 +47,6 @@ class Classifier(nn.Module):
         out = self.fc_1(out)
         out = self.fc_2(out)
 
-        # Softmax
-        out = self.softmax(out)
-
         return out
 
     def train(self, real_images, labels):
@@ -60,7 +57,7 @@ class Classifier(nn.Module):
         classifier_output = self.forward(real_images)
 
         # Compute classifier loss:
-        classifier_loss = F.mse_loss(classifier_output, labels)
+        classifier_loss = F.binary_cross_entropy_with_logits(classifier_output, labels)
 
         # Compute gradients:
         classifier_loss.backward()

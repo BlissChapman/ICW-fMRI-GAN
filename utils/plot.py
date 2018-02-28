@@ -25,10 +25,10 @@ class Plot:
         figure.savefig(output_file)
         plt.close()
 
-    def plot_loss_histories(critic_losses, generator_losses, output_path):
+    def plot_histories(histories, titles, output_path):
         plt.figure(figsize=(30, 20))
-        plt.plot(critic_losses)
-        plt.plot(generator_losses)
-        plt.legend(['Critic Loss', 'Generator Loss'])
+        for history in histories:
+            plt.plot(history)
+        plt.legend(titles)
         plt.savefig(output_path)
         plt.close()

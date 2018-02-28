@@ -12,9 +12,11 @@ pip3 install -r requirements.txt
 # Run!
 python3 train.py
 
-python generate.py <path to generator> <num samples to generate> <output directory>
+python3 generate.py <path to generator> <num samples to generate> <output directory>
 
-python evaluate.py <path to generator> <path to real data> <path to synthetic data> <output directory>
+python3 evaluation/train_classifiers.py <path to generator> <path to real data> <path to synthetic data> <output directory>
+
+python3
 ```
 
 ## Examples

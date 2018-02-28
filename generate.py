@@ -31,6 +31,7 @@ if CUDA:
 
 # ========== Hyperparameters ==========
 DATA_DIR = 'data/'
+CACHE_DIR = 'data/real_data_cache/'
 
 shutil.rmtree(args.output_dir, ignore_errors=True)
 os.makedirs(args.output_dir)
@@ -49,8 +50,11 @@ description_f.write('NOISE_SAMPLE_LENGTH: {0}\n'.format(NOISE_SAMPLE_LENGTH))
 description_f.close()
 
 # ========== Data ==========
-brainpedia = Brainpedia(data_dir=DATA_DIR, scale=DOWNSAMPLE_SCALE)
-brainpedia_generator = brainpedia.batch_generator(1, CUDA)
+brainpedia = Brainpedia(data_dirs=[DATA_DIR],
+                        cache_dir=CACHE_DIR,
+                        scale=DOWNSAMPLE_SCALE)
+all_brain_data, all_brain_data_tags = brainpedia.all_data()
+brainpedia_generator = brainpedia.batch_generator(all_brain_data, all_brain_data_tags, 1, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 
 # ========== Models ==========
@@ -84,4 +88,7 @@ for step in range(args.num_samples):
     # Save synthetic brain image metadata
     with open("{0}/image_{1}_metadata.json".format(args.output_dir, step), 'w') as metadata_f:
         sample_label = brainpedia.decode_label(labels_batch.data[0])
-        json.dump({'tags': sample_label}, metadata_f)
+        json.dump({'tags': sample_label + ','}, metadata_f)
+
+    # Logging
+    print("PERCENT GENERATED: {0:.2f}%\r".format(100.0*float(step)/float(args.num_samples)), end='')
