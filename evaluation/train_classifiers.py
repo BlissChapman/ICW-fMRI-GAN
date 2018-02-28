@@ -59,22 +59,25 @@ brainpedia = Brainpedia(data_dirs=[args.data_dir],
                         cache_dir='data/real_data_cache/',
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
-test_brain_data = Variable(torch.Tensor(test_brain_data))
-if CUDA:
-    test_brain_data = test_brain_data.cuda()
-
-# Augmented data:
-augmented_brainpedia = Brainpedia(data_dirs=[args.data_dir, args.augmented_data_dir],
-                                  cache_dir='data/augmented_data_cache/',
-                                  scale=DOWNSAMPLE_SCALE)
-augmented_all_brain_data, augmented_all_brain_data_tags = augmented_brainpedia.all_data()
-
-# TODO: Remove test data from augmented brain data set.
-# TODO: Determine if both datasets need to be computed with the same mask.
 
 # Build real data generator:
 train_generator = brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
+
+# Create real data tensors:
+train_brain_data = Variable(torch.Tensor(train_brain_data))
+test_brain_data = Variable(torch.Tensor(test_brain_data))
+if CUDA:
+    train_brain_data = train_brain_data.cuda()
+    test_brain_data = test_brain_data.cuda()
+
+# Augmented data:
+# TODO: Remove test data from augmented brain data set.
+# TODO: Determine if both datasets need to be computed with the same mask.
+augmented_brainpedia = Brainpedia(data_dirs=[args.data_dir, args.augmented_data_dir],
+                                  cache_dir='data/augmented_data_cache/',
+                                  scale=DOWNSAMPLE_SCALE)
+augmented_all_brain_data, augmented_all_brain_data_tags = augmented_brainpedia.all_data()
 
 # Build augmented data generator:
 augmented_train_generator = augmented_brainpedia.batch_generator(augmented_all_brain_data, augmented_all_brain_data_tags, BATCH_SIZE, CUDA)
@@ -89,13 +92,13 @@ augmented_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                                      cudaEnabled=CUDA)
 
 
-def compute_accuracy(nn_classifier, augmented_nn_classifier):
-    total_tests = len(test_brain_data_tags)
+def compute_accuracy(nn_classifier, augmented_nn_classifier, brain_data, brain_data_tags):
+    total_tests = len(brain_data_tags)
 
     # Generate predictions on test set:
-    nn_classifier_predictions = nn_classifier.forward(test_brain_data)
-    augmented_nn_classifier_predictions = augmented_nn_classifier.forward(test_brain_data)
-    random_guesses = np.array(test_brain_data_tags).copy()
+    nn_classifier_predictions = nn_classifier.forward(brain_data)
+    augmented_nn_classifier_predictions = augmented_nn_classifier.forward(brain_data)
+    random_guesses = np.array(brain_data_tags).copy()
     np.random.shuffle(random_guesses)
 
     # Count number of correct predictions:
@@ -105,7 +108,7 @@ def compute_accuracy(nn_classifier, augmented_nn_classifier):
     num_same_guesses = 0
 
     for i in range(total_tests):
-        truth = brainpedia.decode_label(test_brain_data_tags[i])
+        truth = brainpedia.decode_label(brain_data_tags[i])
         nn_prediction = brainpedia.decode_label(nn_classifier_predictions[i].data)
         augmented_nn_prediction = augmented_brainpedia.decode_label(augmented_nn_classifier_predictions[i].data)
         random_prediction = brainpedia.decode_label(random_guesses[i])
@@ -132,8 +135,10 @@ def compute_accuracy(nn_classifier, augmented_nn_classifier):
 nn_classifier_loss_per_vis_interval = []
 augmented_nn_classifier_loss_per_vis_interval = []
 
-nn_classifier_acc_per_vis_interval = []
-augmented_nn_classifier_acc_per_vis_interval = []
+nn_classifier_test_acc_per_vis_interval = []
+augmented_nn_classifier_test_acc_per_vis_interval = []
+nn_classifier_train_acc_per_vis_interval = []
+augmented_nn_classifier_train_acc_per_vis_interval = []
 
 running_nn_classifier_loss = 0.0
 running_augmented_nn_classifier_loss = 0.0
@@ -160,19 +165,30 @@ for training_step in range(1, TRAINING_STEPS + 1):
 
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
-        # Compute accuracy stats:
-        nn_accuracy, nn_augmented_accuracy, random_accuracy, fraction_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier)
-        nn_classifier_acc_per_vis_interval.append(nn_accuracy)
-        augmented_nn_classifier_acc_per_vis_interval.append(nn_augmented_accuracy)
+        # Compute accuracy stats on test set:
+        nn_test_accuracy, nn_test_augmented_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, test_brain_data, test_brain_data_tags)
+        nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
+        augmented_nn_classifier_test_acc_per_vis_interval.append(nn_test_augmented_accuracy)
+
+        # Compute accuracy stats on train set:
+        nn_train_accuracy, nn_train_augmented_accuracy, random_train_accuracy, fraction_train_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, train_brain_data, train_brain_data_tags)
+        nn_classifier_train_acc_per_vis_interval.append(nn_train_accuracy)
+        augmented_nn_classifier_train_acc_per_vis_interval.append(nn_train_augmented_accuracy)
 
         # Logging:
         print("===== TRAINING STEP {0} / {1} =====".format(training_step, TRAINING_STEPS))
-        print("NN CLASSIFIER LOSS:            {0}".format(running_nn_classifier_loss))
-        print("NN AUGMENTED CLASSIFIER LOSS:  {0}".format(running_augmented_nn_classifier_loss))
-        print("NN CLASSIFIER ACCURACY: {0:.2f}%".format(100.0 * nn_accuracy))
-        print("NN AUGMENTED CLASSIFIER ACCURACY: {0:.2f}%".format(100.0 * nn_augmented_accuracy))
-        print("RANDOM CLASSIFIER ACCURACY: {0:.2f}%".format(100.0 * random_accuracy))
-        print("PERCENT SAME GUESSES: {0:.2f}%\n".format(100.0 * fraction_same_guesses))
+        print("NN CLASSIFIER LOSS:                        {0}".format(running_nn_classifier_loss))
+        print("NN AUGMENTED CLASSIFIER LOSS:              {0}\n".format(running_augmented_nn_classifier_loss))
+
+        print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * nn_test_accuracy))
+        print("NN AUGMENTED CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * nn_test_augmented_accuracy))
+        print("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%".format(100.0 * random_test_accuracy))
+        print("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
+
+        print("NN CLASSIFIER TRAIN ACCURACY:               {0:.2f}%".format(100.0 * nn_train_accuracy))
+        print("NN AUGMENTED CLASSIFIER TRAIN ACCURACY:     {0:.2f}%".format(100.0 * nn_train_augmented_accuracy))
+        print("RANDOM CLASSIFIER TRAIN ACCURACY:           {0:.2f}%".format(100.0 * random_train_accuracy))
+        print("PERCENT TRAIN SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_train_same_guesses))
 
         # Loss histories
         nn_classifier_loss_per_vis_interval.append(running_nn_classifier_loss)
@@ -183,8 +199,8 @@ for training_step in range(1, TRAINING_STEPS + 1):
         Plot.plot_histories([nn_classifier_loss_per_vis_interval, augmented_nn_classifier_loss_per_vis_interval],
                             ['[REAL] Loss', '[REAL+SYNTHETIC] Loss'],
                             "{0}/loss_history".format(args.output_dir))
-        Plot.plot_histories([nn_classifier_acc_per_vis_interval, augmented_nn_classifier_acc_per_vis_interval],
-                            ['[REAL] Accuracy', '[REAL+SYNTHETIC] Accuracy'],
+        Plot.plot_histories([nn_classifier_train_acc_per_vis_interval, augmented_nn_classifier_train_acc_per_vis_interval, nn_classifier_test_acc_per_vis_interval, augmented_nn_classifier_test_acc_per_vis_interval],
+                            ['[REAL] Train Accuracy', '[REAL+SYNTHETIC] Train Accuracy', '[REAL] Test Accuracy', '[REAL+SYNTHETIC] Test Accuracy'],
                             "{0}/accuracy_history".format(args.output_dir))
 
         # Save model at checkpoint
