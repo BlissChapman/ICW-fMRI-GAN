@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import torch
 
 from brainpedia.preprocessor import Preprocessor
@@ -41,7 +40,7 @@ class Brainpedia:
         np.random.shuffle(brain_data_tags)
 
         # Split into training and test sets
-        end_train_data_idx = int(epoch_length*(3/4))
+        end_train_data_idx = int(epoch_length * (3 / 4))
         train_brain_data = brain_data[:end_train_data_idx]
         train_brain_data_tags = brain_data_tags[:end_train_data_idx]
         test_brain_data = brain_data[end_train_data_idx:]

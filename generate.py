@@ -91,4 +91,4 @@ for step in range(args.num_samples):
         json.dump({'tags': sample_label + ','}, metadata_f)
 
     # Logging
-    print("PERCENT GENERATED: {0:.2f}%\r".format(100.0*float(step)/float(args.num_samples)), end='')
+    print("PERCENT GENERATED: {0:.2f}%\r".format(100.0 * float(step) / float(args.num_samples)), end='')

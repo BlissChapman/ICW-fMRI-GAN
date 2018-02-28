@@ -84,6 +84,7 @@ augmented_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                                      num_classes=augmented_brain_data_tag_shape[0],
                                      cudaEnabled=CUDA)
 
+
 def compute_accuracy(nn_classifier, augmented_nn_classifier):
     total_tests = len(test_brain_data_tags)
 
@@ -106,21 +107,22 @@ def compute_accuracy(nn_classifier, augmented_nn_classifier):
         random_prediction = brainpedia.decode_label(random_guesses[i])
 
         if nn_prediction == truth:
-           num_nn_classifier_correct += 1
+            num_nn_classifier_correct += 1
         if augmented_nn_prediction == truth:
-           num_augmented_nn_classifier_correct += 1
+            num_augmented_nn_classifier_correct += 1
         if random_prediction == truth:
             num_rand_guesses_correct += 1
         if nn_prediction == augmented_nn_prediction:
             num_same_guesses += 1
 
     # Compute accuracy:
-    nn_accuracy = float(num_nn_classifier_correct)/float(total_tests)
-    nn_augmented_accuracy = float(num_augmented_nn_classifier_correct)/float(total_tests)
-    random_accuracy = float(num_rand_guesses_correct)/float(total_tests)
-    fraction_same_guesses = float(num_same_guesses)/float(total_tests)
+    nn_accuracy = float(num_nn_classifier_correct) / float(total_tests)
+    nn_augmented_accuracy = float(num_augmented_nn_classifier_correct) / float(total_tests)
+    random_accuracy = float(num_rand_guesses_correct) / float(total_tests)
+    fraction_same_guesses = float(num_same_guesses) / float(total_tests)
 
     return nn_accuracy, nn_augmented_accuracy, random_accuracy, fraction_same_guesses
+
 
 # ========== TRAINING ===========
 nn_classifier_loss_per_vis_interval = []
