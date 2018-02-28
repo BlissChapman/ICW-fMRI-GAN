@@ -13,7 +13,7 @@ import utils.utils
 
 from brainpedia.brainpedia import Brainpedia
 from brainpedia.fmri_processing import invert_preprocessor_scaling
-from evaluation.neurosynth import avg_correlation_of_image_to_images_in_brainpedia_with_same_label
+from evaluation.neurosynth import avg_correlation_of_image_to_images_in_brainpedia_with_same_tags
 from utils.plot import Plot
 from torch.autograd import Variable
 
@@ -143,7 +143,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
         torch.save(critic.state_dict(), "{0}critic".format(MODEL_OUTPUT_DIR))
 
         # Upsample and save samples
-        sample_label = brainpedia.decode_label(labels_batch.data[0])
+        sample_tags = brainpedia.decode_label(labels_batch.data[0])
         real_sample_data = real_brain_img_data_batch[0].cpu().data.numpy().squeeze()
         synthetic_sample_data = synthetic_brain_img_data_batch[0].cpu().data.numpy().squeeze()
         upsampled_real_brain_img = invert_preprocessor_scaling(real_sample_data, brainpedia.preprocessor)
@@ -156,17 +156,18 @@ for training_step in range(1, TRAINING_STEPS + 1):
         nibabel.save(upsampled_synthetic_brain_img, synthetic_sample_output_path)
 
         # Compute correlation scores
-        real_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_label(image_path=real_sample_output_path,
+        real_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_tags(image_path=real_sample_output_path,
                                                                                                    brainpedia=brainpedia,
-                                                                                                   label=sample_label)
-        synthetic_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_label(image_path=synthetic_sample_output_path,
+                                                                                                   tags=sample_tags)
+        synthetic_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_tags(image_path=synthetic_sample_output_path,
                                                                                                         brainpedia=brainpedia,
-                                                                                                        label=sample_label)
+                                                                                                        tags=sample_tags)
 
         # Visualize samples
+        title = "{0}".format(sample_tags)
         Plot.plot_sample_brain_data(real_sample_brain_img=upsampled_real_brain_img,
                                     synthetic_sample_brain_img=upsampled_synthetic_brain_img,
                                     real_sample_correlation=real_sample_correlation,
                                     synthetic_sample_correlation=synthetic_sample_correlation,
                                     output_file="{0}sample_{1}".format(VIS_OUTPUT_DIR, training_step),
-                                    title=sample_label)
+                                    title=title)
