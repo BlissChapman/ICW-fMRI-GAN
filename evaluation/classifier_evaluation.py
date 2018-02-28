@@ -224,7 +224,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
         torch.save(synthetic_nn_classifier.state_dict(), "{0}/synthetic_nn_classifier".format(args.output_dir))
 
 
-# Svae final classifier results to results_f:
+# Svae final NN classifier results to results_f:
 results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * nn_test_accuracy))
 results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * nn_test_synthetic_accuracy))
 results_f.write("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%\n".format(100.0 * random_test_accuracy))

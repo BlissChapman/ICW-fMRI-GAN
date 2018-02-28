@@ -89,4 +89,9 @@ class Brainpedia:
 
     def decode_label(self, encoded_label):
         brain_data_tag_decoding_map = self.preprocessor.brain_data_tags_decoding()
-        return brain_data_tag_decoding_map[np.argmax(encoded_label)]
+        tags = []
+        for i in range(len(encoded_label)):
+            if encoded_label[i] == 1.0:
+                tag = brain_data_tag_decoding_map[i]
+                tags.append(tag)
+        return tags

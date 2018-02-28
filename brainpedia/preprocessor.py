@@ -110,8 +110,8 @@ class Preprocessor:
             brain_imgs.append(brain_img)
 
             # Load brain image metadata.
-            metadata_tag = self.label_for_brain_image(filename)
-            brain_data_tags.append(metadata_tag)
+            metadata_tags = self.labels_for_brain_image(filename)
+            brain_data_tags.append(metadata_tags)
 
             # Downsample brain image.
             downsampled_brain_img = resample_brain_img(brain_img, scale=self.scale)
@@ -122,10 +122,11 @@ class Preprocessor:
             brain_data.append(normalized_downsampled_brain_img_data)
 
             # Build one hot encoding map.
-            if metadata_tag not in brain_data_tag_encoding_map:
-                brain_data_tag_encoding_map[metadata_tag] = tag_encoding_count
-                brain_data_tag_decoding_map[tag_encoding_count] = metadata_tag
-                tag_encoding_count += 1
+            for tag in metadata_tags:
+                if tag not in brain_data_tag_encoding_map:
+                    brain_data_tag_encoding_map[tag] = tag_encoding_count
+                    brain_data_tag_decoding_map[tag_encoding_count] = tag
+                    tag_encoding_count += 1
 
         # Compute dataset mask.
         print("Computing dataset mask...\r", end='')
@@ -136,12 +137,11 @@ class Preprocessor:
         num_unique_labels = len(brain_data_tag_encoding_map.items())
 
         for i in range(len(brain_data_tags)):
-            tag = brain_data_tags[i]
-
+            tags = brain_data_tags[i]
             tags_encoding = np.zeros(num_unique_labels)
-            tag_one_hot_encoding_idx = brain_data_tag_encoding_map[tag]
-            tags_encoding[tag_one_hot_encoding_idx] = 1
-
+            for tag in tags:
+                tag_one_hot_encoding_idx = brain_data_tag_encoding_map[tag]
+                tags_encoding[tag_one_hot_encoding_idx] = 1
             brain_data_tags[i] = tags_encoding
 
         # Write preprocessed brain data out as binary files.
@@ -159,7 +159,8 @@ class Preprocessor:
         pickle.dump(brain_data_tag_encoding_map, brain_data_tags_encoding_f)
         pickle.dump(brain_data_tag_decoding_map, brain_data_tags_decoding_f)
 
-    def label_for_brain_image(self, brain_image_path):
+    def labels_for_brain_image(self, brain_image_path):
         metadata_file_path = brain_image_path.split('.')[0] + '_metadata.json'
         metadata_json = json.load(open(metadata_file_path, 'r'))
-        return metadata_json['tags'][:-1]
+        tags = metadata_json['tags'][:-1]
+        return tags.split(',')
