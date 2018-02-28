@@ -23,8 +23,8 @@ class Brainpedia:
 
     def all_data(self):
         # Load data from preprocessed binary files.
-        brain_data = self.preprocessor.brain_data()
-        brain_data_tags = self.preprocessor.brain_data_tags()
+        brain_data = np.array(self.preprocessor.brain_data())
+        brain_data_tags = np.array(self.preprocessor.brain_data_tags())
         return brain_data, brain_data_tags
 
     def train_test_split(self):
@@ -41,10 +41,10 @@ class Brainpedia:
 
         # Split into training and test sets
         end_train_data_idx = int(epoch_length * (3 / 4))
-        train_brain_data = brain_data[:end_train_data_idx]
-        train_brain_data_tags = brain_data_tags[:end_train_data_idx]
-        test_brain_data = brain_data[end_train_data_idx:]
-        test_brain_data_tags = brain_data_tags[end_train_data_idx:]
+        train_brain_data = np.array(brain_data[:end_train_data_idx])
+        train_brain_data_tags = np.array(brain_data_tags[:end_train_data_idx])
+        test_brain_data = np.array(brain_data[end_train_data_idx:])
+        test_brain_data_tags = np.array(brain_data_tags[end_train_data_idx:])
 
         return train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags
 

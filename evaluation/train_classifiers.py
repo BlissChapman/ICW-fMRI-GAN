@@ -12,6 +12,7 @@ import torch
 
 from brainpedia.brainpedia import Brainpedia
 from models.classifier import Classifier
+from sklearn.svm import LinearSVC
 from torch.autograd import Variable
 from utils.plot import Plot
 
@@ -72,6 +73,33 @@ synthetic_all_brain_data, synthetic_all_brain_data_tags = synthetic_brainpedia.a
 synthetic_train_generator = synthetic_brainpedia.batch_generator(synthetic_all_brain_data, synthetic_all_brain_data_tags, BATCH_SIZE, CUDA)
 synthetic_brain_data_shape, synthetic_brain_data_tag_shape = synthetic_brainpedia.sample_shapes()
 
+
+# ========== SVMs ==========
+svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
+synthetic_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
+
+# Flatten data into one dimension:
+flattened_train_brain_data = train_brain_data.reshape(train_brain_data.shape[0], -1)
+flattened_train_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in train_brain_data_tags])
+
+flattened_test_brain_data = test_brain_data.reshape(test_brain_data.shape[0], -1)
+flattened_test_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in test_brain_data_tags])
+
+flattened_synthetic_all_brain_data = synthetic_all_brain_data.reshape(synthetic_all_brain_data.shape[0], -1)
+flattened_synthetic_all_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags])
+
+# Train:
+svm_classifier.fit(flattened_train_brain_data, flattened_train_brain_data_tags)
+synthetic_svm_classifier.fit(flattened_synthetic_all_brain_data, flattened_synthetic_all_brain_data_tags)
+
+# Compute accuracy:
+svm_classifier_score = svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
+synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
+
+print("SVM CLASSIFIER SCORE: ", svm_classifier_score)
+print("SYNTHETIC SVM CLASSIFIER SCORE: ", synthetic_svm_classifier_score)
+
+
 # ========== MODELS ==========
 nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                            num_classes=brain_data_tag_shape[0],
@@ -81,7 +109,7 @@ synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                                      cudaEnabled=CUDA)
 
 
-def compute_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
+def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
     brain_data = Variable(torch.Tensor(brain_data))
     if CUDA:
         brain_data = brain_data.cuda()
@@ -157,7 +185,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data, test_brain_data_tags)
+        nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data, test_brain_data_tags)
         nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
         synthetic_nn_classifier_test_acc_per_vis_interval.append(nn_test_synthetic_accuracy)
         random_classifier_test_acc_per_vis_interval.append(random_test_accuracy)
