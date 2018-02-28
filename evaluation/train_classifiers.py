@@ -166,9 +166,9 @@ for training_step in range(1, TRAINING_STEPS + 1):
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        nn_test_accuracy, nn_test_augmented_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, test_brain_data_v, test_brain_data_tags)
-        nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
-        augmented_nn_classifier_test_acc_per_vis_interval.append(nn_test_augmented_accuracy)
+        # nn_test_accuracy, nn_test_augmented_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, test_brain_data_v, test_brain_data_tags)
+        # nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
+        # augmented_nn_classifier_test_acc_per_vis_interval.append(nn_test_augmented_accuracy)
 
         # Compute accuracy stats on train set:
         nn_train_accuracy, nn_train_augmented_accuracy, random_train_accuracy, fraction_train_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, train_brain_data_v, train_brain_data_tags)
@@ -180,10 +180,10 @@ for training_step in range(1, TRAINING_STEPS + 1):
         print("NN CLASSIFIER LOSS:                        {0}".format(running_nn_classifier_loss))
         print("NN AUGMENTED CLASSIFIER LOSS:              {0}\n".format(running_augmented_nn_classifier_loss))
 
-        print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * nn_test_accuracy))
-        print("NN AUGMENTED CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * nn_test_augmented_accuracy))
-        print("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%".format(100.0 * random_test_accuracy))
-        print("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
+        # print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * nn_test_accuracy))
+        # print("NN AUGMENTED CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * nn_test_augmented_accuracy))
+        # print("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%".format(100.0 * random_test_accuracy))
+        # print("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
 
         print("NN CLASSIFIER TRAIN ACCURACY:               {0:.2f}%".format(100.0 * nn_train_accuracy))
         print("NN AUGMENTED CLASSIFIER TRAIN ACCURACY:     {0:.2f}%".format(100.0 * nn_train_augmented_accuracy))
