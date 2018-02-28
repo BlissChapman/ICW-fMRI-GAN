@@ -94,7 +94,7 @@ running_critic_loss = 0.0
 running_generator_loss = 0.0
 running_batch_start_time = timeit.default_timer()
 
-for training_step in range(1, TRAINING_STEPS+1):
+for training_step in range(1, TRAINING_STEPS + 1):
     print("BATCH: [{0}/{1}]\r".format(training_step % VISUALIZATION_INTERVAL, VISUALIZATION_INTERVAL), end='')
 
     # Train critic

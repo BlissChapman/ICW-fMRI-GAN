@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import sys
 sys.path.append(".")
 
@@ -58,6 +60,8 @@ brainpedia = Brainpedia(data_dirs=[args.data_dir],
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 test_brain_data = Variable(torch.Tensor(test_brain_data))
+if CUDA:
+    test_brain_data = test_brain_data.cuda()
 
 # Augmented data:
 augmented_brainpedia = Brainpedia(data_dirs=[args.data_dir, args.augmented_data_dir],
