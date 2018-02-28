@@ -63,7 +63,7 @@ train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags =
 # Create real data tensors:
 test_brain_data_v = Variable(torch.Tensor(test_brain_data))
 if CUDA:
-    train_brain_data_v = train_brain_data_v.cuda()
+    test_brain_data_v = test_brain_data_v.cuda()
 
 # Build real data generator:
 train_generator = brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
