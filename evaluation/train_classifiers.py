@@ -60,16 +60,16 @@ brainpedia = Brainpedia(data_dirs=[args.data_dir],
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 
+# Create real data tensors:
+train_brain_data_v = Variable(torch.Tensor(train_brain_data))
+test_brain_data_v = Variable(torch.Tensor(test_brain_data))
+if CUDA:
+    train_brain_data_v = train_brain_data.cuda()
+    test_brain_data_v = test_brain_data.cuda()
+
 # Build real data generator:
 train_generator = brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
-
-# Create real data tensors:
-train_brain_data = Variable(torch.Tensor(train_brain_data))
-test_brain_data = Variable(torch.Tensor(test_brain_data))
-if CUDA:
-    train_brain_data = train_brain_data.cuda()
-    test_brain_data = test_brain_data.cuda()
 
 # Augmented data:
 # TODO: Remove test data from augmented brain data set.
@@ -166,12 +166,12 @@ for training_step in range(1, TRAINING_STEPS + 1):
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        nn_test_accuracy, nn_test_augmented_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, test_brain_data, test_brain_data_tags)
+        nn_test_accuracy, nn_test_augmented_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, test_brain_data_v, test_brain_data_tags)
         nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
         augmented_nn_classifier_test_acc_per_vis_interval.append(nn_test_augmented_accuracy)
 
         # Compute accuracy stats on train set:
-        nn_train_accuracy, nn_train_augmented_accuracy, random_train_accuracy, fraction_train_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, train_brain_data, train_brain_data_tags)
+        nn_train_accuracy, nn_train_augmented_accuracy, random_train_accuracy, fraction_train_same_guesses = compute_accuracy(nn_classifier, augmented_nn_classifier, train_brain_data_v, train_brain_data_tags)
         nn_classifier_train_acc_per_vis_interval.append(nn_train_accuracy)
         augmented_nn_classifier_train_acc_per_vis_interval.append(nn_train_augmented_accuracy)
 
