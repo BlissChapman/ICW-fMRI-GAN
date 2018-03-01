@@ -13,8 +13,8 @@ class Plot:
                                title=None):
 
         figure = plt.figure(figsize=(10, 10))
-        figure.text(0.5, 0.5, "[REAL] Neurosynth decoder correlation with {0}\n  examples in Brainpedia: {1:.4f}".format(title, real_sample_correlation), ha='center')
-        figure.text(0.5, 0.05, "[SYNTHETIC] Neurosynth decoder correlation with {0}\n  examples in Brainpedia: {1:.4f}".format(title, synthetic_sample_correlation), ha='center')
+        figure.text(0.5, 0.5, "[REAL] Average correlation with {0}\n  examples in Brainpedia: {1:.4f}".format(title, real_sample_correlation), ha='center')
+        figure.text(0.5, 0.05, "[SYNTHETIC] Average correlation with {0}\n  examples in Brainpedia: {1:.4f}".format(title, synthetic_sample_correlation), ha='center')
 
         real_brain_img_axes = plt.subplot(2, 1, 1)
         synthetic_brain_img_axes = plt.subplot(2, 1, 2)
