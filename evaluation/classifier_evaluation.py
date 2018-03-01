@@ -18,8 +18,10 @@ from utils.plot import Plot
 
 
 parser = argparse.ArgumentParser(description="Train classifiers on real and synthetic data.")
-parser.add_argument('data_dir', help='the directory containing real fMRI data')
-parser.add_argument('synthetic_data_dir', help='the directory containing synthetic fMRI data')
+parser.add_argument('train_data_dir', help='the directory containing real fMRI data to train on')
+parser.add_argument('train_data_dir_cache', help='the directory to use as a cache for the train_data_dir preprocessing')
+parser.add_argument('synthetic_data_dir', help='the directory containing synthetic fMRI data to train on')
+parser.add_argument('synthetic_data_dir_cache', help='the directory to use as a cache for the synthetic_data_dir preprocessing')
 parser.add_argument('output_dir', help='the directory to save evaluation results')
 args = parser.parse_args()
 
@@ -33,17 +35,17 @@ torch.manual_seed(1)
 if CUDA:
     torch.cuda.manual_seed(1)
 
-# ========== HYPERPARAMETERS ==========
 shutil.rmtree(args.output_dir, ignore_errors=True)
 os.makedirs(args.output_dir)
 
+# ========== HYPERPARAMETERS ==========
 DOWNSAMPLE_SCALE = 0.25
-TRAINING_STEPS = 30
+TRAINING_STEPS = 200000
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
-VISUALIZATION_INTERVAL = 5
+VISUALIZATION_INTERVAL = 1000
 
-results_f = open(args.output_dir + '/results.txt', 'w')
+results_f = open(args.output_dir + 'results.txt', 'w')
 results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 results_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
 results_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
@@ -53,8 +55,8 @@ results_f.write('VISUALIZATION_INTERVAL: {0}\n\n\n'.format(VISUALIZATION_INTERVA
 
 # ========== DATA ==========
 # Real data:
-brainpedia = Brainpedia(data_dirs=[args.data_dir],
-                        cache_dir='data/real_data_cache/',
+brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
+                        cache_dir=args.train_data_dir_cache,
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 
@@ -64,13 +66,43 @@ brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 
 # Synthetic data:
 synthetic_brainpedia = Brainpedia(data_dirs=[args.synthetic_data_dir],
-                                  cache_dir='data/synthetic_data_cache/',
+                                  cache_dir=args.synthetic_data_dir_cache,
                                   scale=DOWNSAMPLE_SCALE)
 synthetic_all_brain_data, synthetic_all_brain_data_tags = synthetic_brainpedia.all_data()
 
 # Build synthetic data generator:
 synthetic_train_generator = synthetic_brainpedia.batch_generator(synthetic_all_brain_data, synthetic_all_brain_data_tags, BATCH_SIZE, CUDA)
 synthetic_brain_data_shape, synthetic_brain_data_tag_shape = synthetic_brainpedia.sample_shapes()
+
+
+# ========== UTILS ==========
+def hash_encoded_label(encoded_label):
+    # create tuple representing indices that are 1
+    indices_list = []
+    for i in range(len(encoded_label)):
+        if encoded_label[i] == 1:
+            indices_list.append(i)
+    return tuple(indices_list)
+
+class_ctr = -1
+class_encoding_map = {}
+def class_from_encoding(encoded_label):
+    global class_ctr, class_encoding_map
+
+    label_key = hash_encoded_label(encoded_label)
+    if label_key in class_encoding_map:
+        return class_encoding_map[label_key]
+    else:
+        class_ctr += 1
+        class_encoding_map[label_key] = class_ctr
+        return class_ctr
+
+def n_hot_encode(l, n):
+    ret = np.zeros(len(l))
+    max_n_indices = l.argsort()[-n:]
+    for max_idx in max_n_indices:
+        ret[max_idx] = 1.0
+    return ret
 
 
 # ========== SVMs ==========
@@ -80,23 +112,23 @@ synthetic_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 
 # Flatten data into one dimension:
 flattened_train_brain_data = train_brain_data.reshape(train_brain_data.shape[0], -1)
-flattened_train_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in train_brain_data_tags])
-
 flattened_test_brain_data = test_brain_data.reshape(test_brain_data.shape[0], -1)
-flattened_test_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in test_brain_data_tags])
-
 flattened_synthetic_all_brain_data = synthetic_all_brain_data.reshape(synthetic_all_brain_data.shape[0], -1)
-flattened_synthetic_all_brain_data_tags = np.array([np.argmax(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags])
+
+# Convert tags into class values using custom encoding implementation:
+class_encoded_train_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in train_brain_data_tags])
+class_encoded_test_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in test_brain_data_tags])
+class_encoded_synthetic_all_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags])
 
 # Train:
 print("Training SVMs...")
-svm_classifier.fit(flattened_train_brain_data, flattened_train_brain_data_tags)
-synthetic_svm_classifier.fit(flattened_synthetic_all_brain_data, flattened_synthetic_all_brain_data_tags)
+svm_classifier.fit(flattened_train_brain_data, class_encoded_train_brain_data_tags)
+synthetic_svm_classifier.fit(flattened_synthetic_all_brain_data, class_encoded_synthetic_all_brain_data_tags)
 
 # Compute accuracy:
 print("Evaluating SVMs...")
-svm_classifier_score = svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
-synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, flattened_test_brain_data_tags)
+svm_classifier_score = svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
+synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 
 # Save SVM results:
 print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100*svm_classifier_score))
@@ -114,15 +146,14 @@ synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                                      num_classes=synthetic_brain_data_tag_shape[0],
                                      cudaEnabled=CUDA)
 
-
 def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
     brain_data = Variable(torch.Tensor(brain_data))
     if CUDA:
         brain_data = brain_data.cuda()
 
     # Generate predictions on test set:
-    nn_classifier_predictions = nn_classifier.forward(brain_data)
-    synthetic_nn_classifier_predictions = synthetic_nn_classifier.forward(brain_data)
+    nn_classifier_predictions = nn_classifier.forward(brain_data).data.numpy()
+    synthetic_nn_classifier_predictions = synthetic_nn_classifier.forward(brain_data).data.numpy()
     random_guesses = np.array(brain_data_tags).copy()
     np.random.shuffle(random_guesses)
 
@@ -134,19 +165,30 @@ def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brai
     num_same_guesses = 0
 
     for i in range(total_tests):
-        truth = brainpedia.decode_label(brain_data_tags[i])
-        nn_prediction = brainpedia.decode_label(nn_classifier_predictions[i].data)
-        synthetic_nn_prediction = synthetic_brainpedia.decode_label(synthetic_nn_classifier_predictions[i].data)
-        random_prediction = brainpedia.decode_label(random_guesses[i])
+        true_tags = brainpedia.decode_label(brain_data_tags[i])
+        num_tags = len(true_tags)
 
-        if nn_prediction == truth:
-            num_nn_classifier_correct += 1
-        if synthetic_nn_prediction == truth:
-            num_synthetic_nn_classifier_correct += 1
-        if random_prediction == truth:
-            num_rand_guesses_correct += 1
-        if nn_prediction == synthetic_nn_prediction:
-            num_same_guesses += 1
+        # n-hot encode predictions
+        nn_predicted_tags = n_hot_encode(nn_classifier_predictions[i], num_tags)
+        synthetic_nn_predicted_tags = n_hot_encode(synthetic_nn_classifier_predictions[i], num_tags)
+        random_predicted_tags = n_hot_encode(random_guesses[i], num_tags)
+
+        # decode predictions
+        nn_predicted_tags = brainpedia.decode_label(nn_predicted_tags)
+        synthetic_nn_predicted_tags = synthetic_brainpedia.decode_label(synthetic_nn_predicted_tags)
+        random_predicted_tags = brainpedia.decode_label(random_predicted_tags)
+
+        # prepare for comparison
+        true_tags = set(true_tags)
+        nn_predicted_tags = set(nn_predicted_tags)
+        synthetic_nn_predicted_tags = set(synthetic_nn_predicted_tags)
+        random_predicted_tags = set(random_predicted_tags)
+
+        # count correct predictions
+        num_nn_classifier_correct += (nn_predicted_tags == true_tags)
+        num_synthetic_nn_classifier_correct += (synthetic_nn_predicted_tags == true_tags)
+        num_rand_guesses_correct += (random_predicted_tags == true_tags)
+        num_same_guesses += (nn_predicted_tags == synthetic_nn_predicted_tags)
 
     # Compute accuracy:
     nn_accuracy = float(num_nn_classifier_correct) / float(total_tests)
@@ -214,14 +256,14 @@ for training_step in range(1, TRAINING_STEPS + 1):
 
         Plot.plot_histories([nn_classifier_loss_per_vis_interval, synthetic_nn_classifier_loss_per_vis_interval],
                             ['[REAL] Loss', '[REAL+SYNTHETIC] Loss'],
-                            "{0}/loss_history".format(args.output_dir))
+                            "{0}loss_history".format(args.output_dir))
         Plot.plot_histories([nn_classifier_test_acc_per_vis_interval, synthetic_nn_classifier_test_acc_per_vis_interval, random_classifier_test_acc_per_vis_interval],
                             ['[REAL] Test Accuracy', '[REAL+SYNTHETIC] Test Accuracy', '[RANDOM] Test Accuracy'],
-                            "{0}/accuracy_history".format(args.output_dir))
+                            "{0}accuracy_history".format(args.output_dir))
 
         # Save model at checkpoint
-        torch.save(nn_classifier.state_dict(), "{0}/nn_classifier".format(args.output_dir))
-        torch.save(synthetic_nn_classifier.state_dict(), "{0}/synthetic_nn_classifier".format(args.output_dir))
+        torch.save(nn_classifier.state_dict(), "{0}nn_classifier".format(args.output_dir))
+        torch.save(synthetic_nn_classifier.state_dict(), "{0}synthetic_nn_classifier".format(args.output_dir))
 
 
 # Svae final NN classifier results to results_f:

@@ -15,6 +15,8 @@ from torch.autograd import Variable
 
 parser = argparse.ArgumentParser(description="Generate specified number of samples from trained generator and writes to specified output directory.")
 parser.add_argument('generator_state_dict_path', help='path to a file containing the generative model state dict')
+parser.add_argument('train_data_dir', help='the directory containing real fMRI data to train on')
+parser.add_argument('train_data_dir_cache', help='the directory to use as a cache for the train_data_dir preprocessing')
 parser.add_argument('num_samples', type=int, help='the number of samples to generate')
 parser.add_argument('output_dir', help='the directory to save generated samples')
 args = parser.parse_args()
@@ -29,19 +31,16 @@ torch.manual_seed(1)
 if CUDA:
     torch.cuda.manual_seed(1)
 
-# ========== Hyperparameters ==========
-DATA_DIR = 'data/'
-CACHE_DIR = 'data/real_data_cache/'
-
 shutil.rmtree(args.output_dir, ignore_errors=True)
 os.makedirs(args.output_dir)
 
+# ========== Hyperparameters ==========
 DOWNSAMPLE_SCALE = 0.25
 MODEL_DIMENSIONALITY = 64
 CONDITONING_DIMENSIONALITY = 5
 NOISE_SAMPLE_LENGTH = 128
 
-description_f = open(args.output_dir + '/collection_metadata.txt', 'w')
+description_f = open(args.output_dir + 'collection_metadata.txt', 'w')
 description_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 description_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
 description_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
@@ -50,8 +49,8 @@ description_f.write('NOISE_SAMPLE_LENGTH: {0}\n'.format(NOISE_SAMPLE_LENGTH))
 description_f.close()
 
 # ========== Data ==========
-brainpedia = Brainpedia(data_dirs=[DATA_DIR],
-                        cache_dir=CACHE_DIR,
+brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
+                        cache_dir=args.train_data_dir_cache,
                         scale=DOWNSAMPLE_SCALE)
 all_brain_data, all_brain_data_tags = brainpedia.all_data()
 brainpedia_generator = brainpedia.batch_generator(all_brain_data, all_brain_data_tags, 1, CUDA)
@@ -82,13 +81,16 @@ for step in range(args.num_samples):
     upsampled_synthetic_brain_img = invert_preprocessor_scaling(synthetic_sample_data, brainpedia.preprocessor)
 
     # Save upsampled synthetic brain image data
-    synthetic_sample_output_path = "{0}/image_{1}.nii.gz".format(args.output_dir, step)
+    synthetic_sample_output_path = "{0}image_{1}.nii.gz".format(args.output_dir, step)
     nibabel.save(upsampled_synthetic_brain_img, synthetic_sample_output_path)
 
     # Save synthetic brain image metadata
-    with open("{0}/image_{1}_metadata.json".format(args.output_dir, step), 'w') as metadata_f:
-        sample_label = brainpedia.decode_label(labels_batch.data[0])
-        json.dump({'tags': sample_label + ','}, metadata_f)
+    with open("{0}image_{1}_metadata.json".format(args.output_dir, step), 'w') as metadata_f:
+        tags = ""
+        for sample_label in brainpedia.decode_label(labels_batch.data[0]):
+            tags += sample_label + ','
+    
+        json.dump({'tags': tags}, metadata_f)
 
     # Logging
     print("PERCENT GENERATED: {0:.2f}%\r".format(100.0 * float(step) / float(args.num_samples)), end='')

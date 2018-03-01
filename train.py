@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import argparse
 import datetime
 import models.ICW_FMRI_GAN
 import nibabel
@@ -17,17 +18,19 @@ from evaluation.neurosynth import avg_correlation_of_image_to_images_in_brainped
 from utils.plot import Plot
 from torch.autograd import Variable
 
+parser = argparse.ArgumentParser(description="Train ICW_FMRI_GAN.")
+parser.add_argument('train_data_dir', help='the directory containing real fMRI data to train on')
+parser.add_argument('train_data_dir_cache', help='the directory to use as a cache for the train_data_dir preprocessing')
+parser.add_argument('output_dir', help='the directory to save training results')
+args = parser.parse_args()
 
 # ========== OUTPUT DIRECTORIES ==========
-DATA_DIR = 'data/neurovault/collection_1952/'
-CACHE_DIR = 'data/real_data_cache/'
-OUTPUT_DIR = 'train_output/'
-DATA_OUTPUT_DIR = OUTPUT_DIR + 'data/'
-VIS_OUTPUT_DIR = OUTPUT_DIR + 'visualizations/'
-MODEL_OUTPUT_DIR = OUTPUT_DIR + 'models/'
+DATA_OUTPUT_DIR = args.output_dir + 'data/'
+VIS_OUTPUT_DIR = args.output_dir + 'visualizations/'
+MODEL_OUTPUT_DIR = args.output_dir + 'models/'
 
-shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
-os.makedirs(OUTPUT_DIR)
+shutil.rmtree(args.output_dir, ignore_errors=True)
+os.makedirs(args.output_dir)
 os.makedirs(DATA_OUTPUT_DIR)
 os.makedirs(VIS_OUTPUT_DIR)
 os.makedirs(MODEL_OUTPUT_DIR)
@@ -38,12 +41,12 @@ TRAINING_STEPS = 200000
 BATCH_SIZE = 50
 MODEL_DIMENSIONALITY = 64
 CONDITONING_DIMENSIONALITY = 5
-CRITIC_UPDATES_PER_GENERATOR_UPDATE = 1
+CRITIC_UPDATES_PER_GENERATOR_UPDATE = 5
 LAMBDA = 10
-VISUALIZATION_INTERVAL = 1000
+VISUALIZATION_INTERVAL = 2
 NOISE_SAMPLE_LENGTH = 128
 
-description_f = open(OUTPUT_DIR + 'description.txt', 'w')
+description_f = open(args.output_dir + 'description.txt', 'w')
 description_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 description_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
 description_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
@@ -67,8 +70,8 @@ if CUDA:
     torch.cuda.manual_seed(1)
 
 # ========== Data ==========
-brainpedia = Brainpedia(data_dirs=[DATA_DIR],
-                        cache_dir=CACHE_DIR,
+brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
+                        cache_dir=args.train_data_dir_cache,
                         scale=DOWNSAMPLE_SCALE)
 all_brain_data, all_brain_data_tags = brainpedia.all_data()
 brainpedia_generator = brainpedia.batch_generator(all_brain_data, all_brain_data_tags, BATCH_SIZE, CUDA)
