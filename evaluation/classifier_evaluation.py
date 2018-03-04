@@ -161,15 +161,14 @@ results_f.write("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_50
 results_f.write('===================== [Neural Networks] ====================\n')
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 
-nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
-                           num_classes=brain_data_tag_shape[0],
-                           cudaEnabled=CUDA)
-synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
-                                     num_classes=brain_data_tag_shape[0],
-                                     cudaEnabled=CUDA)
-mixed_50_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
-                                    num_classes=brain_data_tag_shape[0],
-                                    cudaEnabled=CUDA)
+# REAL, SYNTHETIC, REAL+SYNTHETIC
+num_classifiers = 3
+classifiers = []
+for i in range(num_classifiers):
+    new_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
+                                num_classes=brain_data_tag_shape[0],
+                                cudaEnabled=CUDA)
+    classifiers.append(new_classifier)
 
 
 def compute_accuracies(classifiers, brain_data, brain_data_tags):
@@ -213,17 +212,9 @@ def compute_accuracies(classifiers, brain_data, brain_data_tags):
 
 
 # ========== TRAINING ===========
-nn_classifier_loss_per_vis_interval = []
-synthetic_nn_classifier_loss_per_vis_interval = []
-mixed_50_nn_classifier_loss_per_vis_interval = []
-
-nn_classifier_test_acc_per_vis_interval = []
-synthetic_nn_classifier_test_acc_per_vis_interval = []
-mixed_50_nn_classifier_test_acc_per_vis_interval = []
-
-running_nn_classifier_loss = 0.0
-running_synthetic_nn_classifier_loss = 0.0
-running_mixed_50_nn_classifier_loss = 0.0
+classifier_losses = [[] for _ in range(num_classifiers)]
+classifier_accuracies = [[] for _ in range(num_classifiers)]
+classifier_running_losses = [0.0 for _ in range(num_classifiers)]
 
 for training_step in range(1, TRAINING_STEPS + 1):
     print("BATCH: [{0}/{1}]\r".format(training_step % VISUALIZATION_INTERVAL, VISUALIZATION_INTERVAL), end='')
@@ -244,43 +235,37 @@ for training_step in range(1, TRAINING_STEPS + 1):
     mixed_50_labels_batch = Variable(mixed_50_labels_batch)
 
     # Train classifiers:
-    nn_classifier_loss = nn_classifier.train(brain_img_data_batch, labels_batch)
-    nn_classifier_synthetic_loss = synthetic_nn_classifier.train(synthetic_brain_img_data_batch, synthetic_labels_batch)
-    nn_classifier_mixed_50_loss = mixed_50_nn_classifier.train(mixed_50_brain_img_data_batch, mixed_50_labels_batch)
+    nn_classifier_loss = classifiers[0].train(brain_img_data_batch, labels_batch)
+    nn_classifier_synthetic_loss = classifiers[1].train(synthetic_brain_img_data_batch, synthetic_labels_batch)
+    nn_classifier_mixed_50_loss = classifiers[2].train(mixed_50_brain_img_data_batch, mixed_50_labels_batch)
 
-    running_nn_classifier_loss += nn_classifier_loss.data[0]
-    running_synthetic_nn_classifier_loss += nn_classifier_synthetic_loss.data[0]
-    running_mixed_50_nn_classifier_loss += nn_classifier_mixed_50_loss.data[0]
+    classifier_running_losses[0] += nn_classifier_loss.data[0]
+    classifier_running_losses[1] += nn_classifier_synthetic_loss.data[0]
+    classifier_running_losses[2] += nn_classifier_mixed_50_loss.data[0]
 
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        accuracies = compute_accuracies([nn_classifier, synthetic_nn_classifier, mixed_50_nn_classifier],
-                                        test_brain_data,
-                                        test_brain_data_tags)
-        nn_classifier_test_acc_per_vis_interval.append(accuracies[0])
-        synthetic_nn_classifier_test_acc_per_vis_interval.append(accuracies[1])
-        mixed_50_nn_classifier_test_acc_per_vis_interval.append(accuracies[2])
+        accuracies = compute_accuracies(classifiers, test_brain_data, test_brain_data_tags)
+        for i in range(num_classifiers):
+            classifier_accuracies[i].append(accuracies[i])
 
         # Logging:
         print("===== TRAINING STEP {0} / {1} =====".format(training_step, TRAINING_STEPS))
-        print("NN CLASSIFIER LOSS:                        {0}".format(running_nn_classifier_loss))
-        print("NN SYNTHETIC CLASSIFIER LOSS:              {0}".format(running_synthetic_nn_classifier_loss))
-        print("NN MIXED 50 CLASSIFIER LOSS:              {0}\n".format(running_mixed_50_nn_classifier_loss))
+        print("NN CLASSIFIER LOSS:                        {0}".format(classifier_running_losses[0]))
+        print("NN SYNTHETIC CLASSIFIER LOSS:              {0}".format(classifier_running_losses[1]))
+        print("NN MIXED 50 CLASSIFIER LOSS:               {0}\n".format(classifier_running_losses[2]))
 
         print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * accuracies[0]))
         print("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * accuracies[1]))
-        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}\n\n%".format(100.0 * accuracies[2]))
+        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n\n%".format(100.0 * accuracies[2]))
 
         # Loss histories
-        nn_classifier_loss_per_vis_interval.append(running_nn_classifier_loss)
-        synthetic_nn_classifier_loss_per_vis_interval.append(running_synthetic_nn_classifier_loss)
-        mixed_50_nn_classifier_loss_per_vis_interval.append(running_mixed_50_nn_classifier_loss)
-        running_nn_classifier_loss = 0.0
-        running_synthetic_nn_classifier_loss = 0.0
-        running_mixed_50_nn_classifier_loss = 0.0
+        for i in range(num_classifiers):
+            classifier_losses[i].append(classifier_running_losses[i])
+            classifier_running_losses[i] = 0.0
 
-        Plot.plot_histories([nn_classifier_loss_per_vis_interval, synthetic_nn_classifier_loss_per_vis_interval, mixed_50_nn_classifier_loss_per_vis_interval],
+        Plot.plot_histories(classifier_losses,
                             ['[REAL] Loss', '[SYNTHETIC] Loss', '[REAL + SYNTHETIC] Loss'],
                             "{0}loss_histories".format(args.output_dir))
         Plot.plot_histories(accuracies,
@@ -288,9 +273,9 @@ for training_step in range(1, TRAINING_STEPS + 1):
                             "{0}accuracy_histories".format(args.output_dir))
 
         # Save model at checkpoint
-        torch.save(nn_classifier.state_dict(), "{0}nn_classifier".format(args.output_dir))
-        torch.save(synthetic_nn_classifier.state_dict(), "{0}synthetic_nn_classifier".format(args.output_dir))
-        torch.save(mixed_50_nn_classifier.state_dict(), "{0}mixed_50_nn_classifier".format(args.output_dir))
+        torch.save(classifiers[0].state_dict(), "{0}nn_classifier".format(args.output_dir))
+        torch.save(classifiers[1].state_dict(), "{0}synthetic_nn_classifier".format(args.output_dir))
+        torch.save(classifiers[2].state_dict(), "{0}mixed_50_nn_classifier".format(args.output_dir))
 
 
 # Svae final NN classifier results to results_f:
