@@ -159,15 +159,20 @@ results_f.write("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_50
 
 # ========== NEURAL NETWORKS ==========
 results_f.write('===================== [Neural Networks] ====================\n')
+brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
+
 nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                            num_classes=brain_data_tag_shape[0],
                            cudaEnabled=CUDA)
 synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
-                                     num_classes=synthetic_brain_data_tag_shape[0],
+                                     num_classes=brain_data_tag_shape[0],
                                      cudaEnabled=CUDA)
+mixed_50_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
+                                    num_classes=brain_data_tag_shape[0],
+                                    cudaEnabled=CUDA)
 
 
-def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
+def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, mixed_50_nn_classifier, brain_data, brain_data_tags):
     brain_data = Variable(torch.Tensor(brain_data))
     if CUDA:
         brain_data = brain_data.cuda()
@@ -175,6 +180,7 @@ def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brai
     # Generate predictions on test set:
     nn_classifier_predictions = nn_classifier.forward(brain_data).data.cpu().numpy()
     synthetic_nn_classifier_predictions = synthetic_nn_classifier.forward(brain_data).data.cpu().numpy()
+    mixed_50_nn_classifier_predictions = mixed_50_nn_classifier.forward(brain_data).data.cpu().numpy()
     random_guesses = np.array(brain_data_tags).copy()
     np.random.shuffle(random_guesses)
 
@@ -182,6 +188,7 @@ def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brai
     total_tests = len(brain_data_tags)
     num_nn_classifier_correct = 0
     num_synthetic_nn_classifier_correct = 0
+    num_mixed_50_nn_classifier_correct = 0
     num_rand_guesses_correct = 0
     num_same_guesses = 0
 
@@ -192,44 +199,52 @@ def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brai
         # n-hot encode predictions
         nn_predicted_tags = n_hot_encode(nn_classifier_predictions[i], num_tags)
         synthetic_nn_predicted_tags = n_hot_encode(synthetic_nn_classifier_predictions[i], num_tags)
+        mixed_50_nn_predicted_tags = n_hot_encode(mixed_50_nn_classifier_predictions[i], num_tags)
         random_predicted_tags = n_hot_encode(random_guesses[i], num_tags)
 
         # decode predictions
         nn_predicted_tags = brainpedia.decode_label(nn_predicted_tags)
         synthetic_nn_predicted_tags = synthetic_brainpedia.decode_label(synthetic_nn_predicted_tags)
+        mixed_50_nn_predicted_tags = brainpedia.decode_label(mixed_50_nn_predicted_tags)
         random_predicted_tags = brainpedia.decode_label(random_predicted_tags)
 
         # prepare for comparison
         true_tags = set(true_tags)
         nn_predicted_tags = set(nn_predicted_tags)
         synthetic_nn_predicted_tags = set(synthetic_nn_predicted_tags)
+        mixed_50_nn_predicted_tags = set(mixed_50_nn_predicted_tags)
         random_predicted_tags = set(random_predicted_tags)
 
         # count correct predictions
         num_nn_classifier_correct += (nn_predicted_tags == true_tags)
         num_synthetic_nn_classifier_correct += (synthetic_nn_predicted_tags == true_tags)
+        num_mixed_50_nn_classifier_correct += (mixed_50_nn_predicted_tags == true_tags)
         num_rand_guesses_correct += (random_predicted_tags == true_tags)
         num_same_guesses += (nn_predicted_tags == synthetic_nn_predicted_tags)
 
     # Compute accuracy:
     nn_accuracy = float(num_nn_classifier_correct) / float(total_tests)
     nn_synthetic_accuracy = float(num_synthetic_nn_classifier_correct) / float(total_tests)
+    nn_mixed_50_accuracy = float(num_mixed_50_nn_classifier_correct) / float(total_tests)
     random_accuracy = float(num_rand_guesses_correct) / float(total_tests)
     fraction_same_guesses = float(num_same_guesses) / float(total_tests)
 
-    return nn_accuracy, nn_synthetic_accuracy, random_accuracy, fraction_same_guesses
+    return nn_accuracy, nn_synthetic_accuracy, nn_mixed_50_accuracy, random_accuracy, fraction_same_guesses
 
 
 # ========== TRAINING ===========
 nn_classifier_loss_per_vis_interval = []
 synthetic_nn_classifier_loss_per_vis_interval = []
+mixed_50_nn_classifier_loss_per_vis_interval = []
 
 nn_classifier_test_acc_per_vis_interval = []
 synthetic_nn_classifier_test_acc_per_vis_interval = []
+mixed_50_nn_classifier_test_acc_per_vis_interval = []
 random_classifier_test_acc_per_vis_interval = []
 
 running_nn_classifier_loss = 0.0
 running_synthetic_nn_classifier_loss = 0.0
+running_mixed_50_nn_classifier_loss = 0.0
 
 for training_step in range(1, TRAINING_STEPS + 1):
     print("BATCH: [{0}/{1}]\r".format(training_step % VISUALIZATION_INTERVAL, VISUALIZATION_INTERVAL), end='')
@@ -239,57 +254,71 @@ for training_step in range(1, TRAINING_STEPS + 1):
     brain_img_data_batch = Variable(brain_img_data_batch)
     labels_batch = Variable(labels_batch)
 
-    # Retrieve [REAL + SYNTHETIC] brain image data batch:
+    # Retrieve [SYNTHETIC] brain image data batch:
     synthetic_brain_img_data_batch, synthetic_labels_batch = next(synthetic_train_generator)
     synthetic_brain_img_data_batch = Variable(synthetic_brain_img_data_batch)
     synthetic_labels_batch = Variable(synthetic_labels_batch)
 
+    # Retrieve [REAL + SYNTHETIC] brain image data batch:
+    mixed_50_brain_img_data_batch, mixed_50_labels_batch = next(mixed_50_train_generator)
+    mixed_50_brain_img_data_batch = Variable(mixed_50_brain_img_data_batch)
+    mixed_50_labels_batch = Variable(mixed_50_labels_batch)
+
     # Train classifiers:
     nn_classifier_loss = nn_classifier.train(brain_img_data_batch, labels_batch)
     nn_classifier_synthetic_loss = synthetic_nn_classifier.train(synthetic_brain_img_data_batch, synthetic_labels_batch)
+    nn_classifier_mixed_50_loss = mixed_50_nn_classifier.train(mixed_50_brain_img_data_batch, mixed_50_labels_batch)
 
     running_nn_classifier_loss += nn_classifier_loss.data[0]
     running_synthetic_nn_classifier_loss += nn_classifier_synthetic_loss.data[0]
+    running_mixed_50_nn_classifier_loss += nn_classifier_mixed_50_loss.data[0]
 
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
         # Compute accuracy stats on test set:
-        nn_test_accuracy, nn_test_synthetic_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, test_brain_data, test_brain_data_tags)
+        nn_test_accuracy, nn_test_synthetic_accuracy, nn_test_mixed_50_accuracy, random_test_accuracy, fraction_test_same_guesses = compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, mixed_50_nn_classifier, test_brain_data, test_brain_data_tags)
         nn_classifier_test_acc_per_vis_interval.append(nn_test_accuracy)
         synthetic_nn_classifier_test_acc_per_vis_interval.append(nn_test_synthetic_accuracy)
+        mixed_50_nn_classifier_test_acc_per_vis_interval.append(nn_test_mixed_50_accuracy)
         random_classifier_test_acc_per_vis_interval.append(random_test_accuracy)
 
         # Logging:
         print("===== TRAINING STEP {0} / {1} =====".format(training_step, TRAINING_STEPS))
         print("NN CLASSIFIER LOSS:                        {0}".format(running_nn_classifier_loss))
-        print("NN SYNTHETIC CLASSIFIER LOSS:              {0}\n".format(running_synthetic_nn_classifier_loss))
+        print("NN SYNTHETIC CLASSIFIER LOSS:              {0}".format(running_synthetic_nn_classifier_loss))
+        print("NN MIXED 50 CLASSIFIER LOSS:              {0}\n".format(running_mixed_50_nn_classifier_loss))
 
         print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * nn_test_accuracy))
         print("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * nn_test_synthetic_accuracy))
+        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%".format(100.0 * nn_test_mixed_50_accuracy))
         print("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%".format(100.0 * random_test_accuracy))
         print("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
 
         # Loss histories
         nn_classifier_loss_per_vis_interval.append(running_nn_classifier_loss)
         synthetic_nn_classifier_loss_per_vis_interval.append(running_synthetic_nn_classifier_loss)
+        mixed_50_nn_classifier_loss_per_vis_interval.append(running_mixed_50_nn_classifier_loss)
         running_nn_classifier_loss = 0.0
         running_synthetic_nn_classifier_loss = 0.0
+        running_mixed_50_nn_classifier_loss = 0.0
 
-        Plot.plot_histories([nn_classifier_loss_per_vis_interval, synthetic_nn_classifier_loss_per_vis_interval],
-                            ['[REAL] Loss', '[REAL+SYNTHETIC] Loss'],
-                            "{0}loss_history".format(args.output_dir))
-        Plot.plot_histories([nn_classifier_test_acc_per_vis_interval, synthetic_nn_classifier_test_acc_per_vis_interval, random_classifier_test_acc_per_vis_interval],
-                            ['[REAL] Test Accuracy', '[REAL+SYNTHETIC] Test Accuracy', '[RANDOM] Test Accuracy'],
-                            "{0}accuracy_history".format(args.output_dir))
+        Plot.plot_histories([nn_classifier_loss_per_vis_interval, synthetic_nn_classifier_loss_per_vis_interval, mixed_50_nn_classifier_loss_per_vis_interval],
+                            ['[REAL] Loss', '[SYNTHETIC] Loss', '[REAL + SYNTHETIC] Loss'],
+                            "{0}loss_histories".format(args.output_dir))
+        Plot.plot_histories([nn_classifier_test_acc_per_vis_interval, synthetic_nn_classifier_test_acc_per_vis_interval, mixed_50_nn_classifier_test_acc_per_vis_interval, random_classifier_test_acc_per_vis_interval],
+                            ['[REAL] Test Accuracy', '[SYNTHETIC] Test Accuracy', '[REAL + SYNTHETIC] Test Accuracy', '[RANDOM] Test Accuracy'],
+                            "{0}accuracy_histories".format(args.output_dir))
 
         # Save model at checkpoint
         torch.save(nn_classifier.state_dict(), "{0}nn_classifier".format(args.output_dir))
         torch.save(synthetic_nn_classifier.state_dict(), "{0}synthetic_nn_classifier".format(args.output_dir))
+        torch.save(mixed_50_nn_classifier.state_dict(), "{0}mixed_50_nn_classifier".format(args.output_dir))
 
 
 # Svae final NN classifier results to results_f:
 results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * nn_test_accuracy))
 results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * nn_test_synthetic_accuracy))
+results_f.write("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n".format(100.0 * nn_test_mixed_50_accuracy))
 results_f.write("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%\n".format(100.0 * random_test_accuracy))
 results_f.write("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
 results_f.close()
