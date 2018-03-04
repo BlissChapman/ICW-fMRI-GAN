@@ -164,8 +164,8 @@ def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brai
         brain_data = brain_data.cuda()
 
     # Generate predictions on test set:
-    nn_classifier_predictions = nn_classifier.forward(brain_data).data.numpy()
-    synthetic_nn_classifier_predictions = synthetic_nn_classifier.forward(brain_data).data.numpy()
+    nn_classifier_predictions = nn_classifier.forward(brain_data).data.cpu().numpy()
+    synthetic_nn_classifier_predictions = synthetic_nn_classifier.forward(brain_data).data.cpu().numpy()
     random_guesses = np.array(brain_data_tags).copy()
     np.random.shuffle(random_guesses)
 
