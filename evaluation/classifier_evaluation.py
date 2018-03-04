@@ -84,8 +84,11 @@ def hash_encoded_label(encoded_label):
             indices_list.append(i)
     return tuple(indices_list)
 
+
 class_ctr = -1
 class_encoding_map = {}
+
+
 def class_from_encoding(encoded_label):
     global class_ctr, class_encoding_map
 
@@ -96,6 +99,7 @@ def class_from_encoding(encoded_label):
         class_ctr += 1
         class_encoding_map[label_key] = class_ctr
         return class_ctr
+
 
 def n_hot_encode(l, n):
     ret = np.zeros(len(l))
@@ -131,10 +135,10 @@ svm_classifier_score = svm_classifier.score(flattened_test_brain_data, class_enc
 synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 
 # Save SVM results:
-print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100*svm_classifier_score))
-print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100*synthetic_svm_classifier_score))
-results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100*svm_classifier_score))
-results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n\n".format(100*synthetic_svm_classifier_score))
+print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100 * svm_classifier_score))
+print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100 * synthetic_svm_classifier_score))
+results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100 * svm_classifier_score))
+results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * synthetic_svm_classifier_score))
 
 
 # ========== NEURAL NETWORKS ==========
@@ -145,6 +149,7 @@ nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
 synthetic_nn_classifier = Classifier(dimensionality=MODEL_DIMENSIONALITY,
                                      num_classes=synthetic_brain_data_tag_shape[0],
                                      cudaEnabled=CUDA)
+
 
 def compute_nn_accuracy(nn_classifier, synthetic_nn_classifier, brain_data, brain_data_tags):
     brain_data = Variable(torch.Tensor(brain_data))

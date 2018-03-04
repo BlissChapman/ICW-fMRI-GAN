@@ -89,7 +89,7 @@ for step in range(args.num_samples):
         tags = ""
         for sample_label in brainpedia.decode_label(labels_batch.data[0]):
             tags += sample_label + ','
-    
+
         json.dump({'tags': tags}, metadata_f)
 
     # Logging

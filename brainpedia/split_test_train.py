@@ -33,12 +33,15 @@ test_data_filenames = all_data_filenames[:test_split_idx]
 train_data_filenames = all_data_filenames[test_split_idx:]
 
 # Copy data in filenames list + associated metadata from data dir to output dir
+
+
 def copy_data(data_filenames, output_dir):
     for data_file_name in data_filenames:
         metadata_file_name = data_file_name.split('.')[0] + '_metadata.json'
 
-        shutil.copyfile(args.data_dir+data_file_name, output_dir+data_file_name)
-        shutil.copyfile(args.data_dir+metadata_file_name, output_dir+metadata_file_name)
+        shutil.copyfile(args.data_dir + data_file_name, output_dir + data_file_name)
+        shutil.copyfile(args.data_dir + metadata_file_name, output_dir + metadata_file_name)
+
 
 copy_data(train_data_filenames, args.train_output_dir)
 copy_data(test_data_filenames, args.test_output_dir)

@@ -137,9 +137,12 @@ for training_step in range(1, TRAINING_STEPS + 1):
         running_critic_loss = 0.0
         running_generator_loss = 0.0
 
-        Plot.plot_histories([critic_losses_per_vis_interval, generator_losses_per_vis_interval],
-                            ["Critic", "Generator"],
-                            "{0}losses".format(MODEL_OUTPUT_DIR))
+        Plot.plot_histories([critic_losses_per_vis_interval],
+                            ["Critic"],
+                            "{0}critic_loss_history.png".format(MODEL_OUTPUT_DIR))
+        Plot.plot_histories([generator_losses_per_vis_interval],
+                            ["Generator"],
+                            "{0}generator_loss_history.png".format(MODEL_OUTPUT_DIR))
 
         # Save model at checkpoint
         torch.save(generator.state_dict(), "{0}generator".format(MODEL_OUTPUT_DIR))
@@ -160,11 +163,11 @@ for training_step in range(1, TRAINING_STEPS + 1):
 
         # Compute correlation scores
         real_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_tags(image_path=real_sample_output_path,
-                                                                                                   brainpedia=brainpedia,
-                                                                                                   tags=sample_tags)
+                                                                                                  brainpedia=brainpedia,
+                                                                                                  tags=sample_tags)
         synthetic_sample_correlation = avg_correlation_of_image_to_images_in_brainpedia_with_same_tags(image_path=synthetic_sample_output_path,
-                                                                                                        brainpedia=brainpedia,
-                                                                                                        tags=sample_tags)
+                                                                                                       brainpedia=brainpedia,
+                                                                                                       tags=sample_tags)
 
         # Visualize samples
         title = "{0}".format(sample_tags)
