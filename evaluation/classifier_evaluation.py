@@ -60,19 +60,28 @@ brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
                         scale=DOWNSAMPLE_SCALE)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 
-# Build real data generator:
-train_generator = brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
-brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
-
 # Synthetic data:
 synthetic_brainpedia = Brainpedia(data_dirs=[args.synthetic_data_dir],
                                   cache_dir=args.synthetic_data_dir_cache,
                                   scale=DOWNSAMPLE_SCALE)
-synthetic_all_brain_data, synthetic_all_brain_data_tags = synthetic_brainpedia.all_data()
+synthetic_brain_data, synthetic_brain_data_tags = synthetic_brainpedia.all_data()
+
+# Since synthetic data was encoded differently than real data, it must be
+# 1) decoded into the raw tags
+# 2) re-encoded using the same method as the real data
+decoded_synthetic_brain_data_tags = [synthetic_brainpedia.decode_label(brain_data_tag) for brain_data_tag in synthetic_brain_data_tags]
+synthetic_brain_data_tags = [brainpedia.encode_label(decoded_brain_data_tag) for decoded_brain_data_tag in decoded_synthetic_brain_data_tags]
+
+# Build real data generator:
+train_generator = Brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
 
 # Build synthetic data generator:
-synthetic_train_generator = synthetic_brainpedia.batch_generator(synthetic_all_brain_data, synthetic_all_brain_data_tags, BATCH_SIZE, CUDA)
-synthetic_brain_data_shape, synthetic_brain_data_tag_shape = synthetic_brainpedia.sample_shapes()
+synthetic_train_generator = Brainpedia.batch_generator(synthetic_brain_data, synthetic_brain_data_tags, BATCH_SIZE, CUDA)
+
+# Build mixed data generator:
+mixed_50_brain_data = np.concatenate((train_brain_data, synthetic_brain_data))
+mixed_50_brain_data_tags = np.concatenate((train_brain_data_tags, synthetic_brain_data_tags))
+mixed_50_train_generator = Brainpedia.batch_generator(mixed_50_brain_data, mixed_50_brain_data_tags, BATCH_SIZE, CUDA)
 
 
 # ========== UTILS ==========
@@ -113,39 +122,39 @@ def n_hot_encode(l, n):
 results_f.write('===================== [SVM] ====================\n')
 svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 synthetic_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
+mixed_50_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 
 # Flatten data into one dimension:
 flattened_train_brain_data = train_brain_data.reshape(train_brain_data.shape[0], -1)
 flattened_test_brain_data = test_brain_data.reshape(test_brain_data.shape[0], -1)
-flattened_synthetic_all_brain_data = synthetic_all_brain_data.reshape(synthetic_all_brain_data.shape[0], -1)
+flattened_synthetic_brain_data = synthetic_brain_data.reshape(synthetic_brain_data.shape[0], -1)
+flattened_mixed_50_brain_data = mixed_50_brain_data.reshape(mixed_50_brain_data.shape[0], -1)
 
 # Convert tags into class values using custom encoding implementation:
 class_encoded_train_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in train_brain_data_tags])
 class_encoded_test_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in test_brain_data_tags])
-
-# Since synthetic data was encoded differently than real data, it must be
-# 1) decoded into the raw tags
-# 2) encoded using the same method as the real data
-# 3) converted into a class number with the same method as the real data
-decoded_synthetic_brain_data_tags = [synthetic_brainpedia.decode_label(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags]
-reencoded_synthetic_brain_data_tags = [brainpedia.encode_label(decoded_brain_data_tag) for decoded_brain_data_tag in decoded_synthetic_brain_data_tags]
-class_encoded_synthetic_all_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in reencoded_synthetic_brain_data_tags])
+class_encoded_synthetic_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in synthetic_brain_data_tags])
+class_encoded_mixed_50_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in mixed_50_brain_data_tags])
 
 # Train:
 print("Training SVMs...")
 svm_classifier.fit(flattened_train_brain_data, class_encoded_train_brain_data_tags)
-synthetic_svm_classifier.fit(flattened_synthetic_all_brain_data, class_encoded_synthetic_all_brain_data_tags)
+synthetic_svm_classifier.fit(flattened_synthetic_brain_data, class_encoded_synthetic_brain_data_tags)
+mixed_50_svm_classifier.fit(flattened_mixed_50_brain_data, class_encoded_mixed_50_brain_data_tags)
 
 # Compute accuracy:
 print("Evaluating SVMs...")
 svm_classifier_score = svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
+mixed_50_svm_classifier_score = mixed_50_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 
 # Save SVM results:
 print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100 * svm_classifier_score))
-print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100 * synthetic_svm_classifier_score))
+print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%".format(100 * synthetic_svm_classifier_score))
+print("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n".format(100 * mixed_50_svm_classifier_score))
 results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100 * svm_classifier_score))
-results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * synthetic_svm_classifier_score))
+results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100 * synthetic_svm_classifier_score))
+results_f.write("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_50_svm_classifier_score))
 
 
 # ========== NEURAL NETWORKS ==========

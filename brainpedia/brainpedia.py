@@ -48,7 +48,7 @@ class Brainpedia:
 
         return train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags
 
-    def batch_generator(self, brain_data, brain_data_tags, batch_size, cuda):
+    def batch_generator(brain_data, brain_data_tags, batch_size, cuda):
         epoch_length = len(brain_data_tags)
 
         while True:
