@@ -87,6 +87,14 @@ class Brainpedia:
         brain_data_tags = self.preprocessor.brain_data_tags()
         return (brain_data[0].shape, brain_data_tags[0].shape)
 
+    def encode_label(self, tags):
+        brain_data_tag_encoding_map = self.preprocessor.brain_data_tags_encoding()
+        tags_encoding = np.zeros(len(brain_data_tag_encoding_map.items()))
+        for tag in tags:
+            tag_one_hot_encoding_idx = brain_data_tag_encoding_map[tag]
+            tags_encoding[tag_one_hot_encoding_idx] = 1
+        return tags_encoding
+
     def decode_label(self, encoded_label):
         brain_data_tag_decoding_map = self.preprocessor.brain_data_tags_decoding()
         tags = []

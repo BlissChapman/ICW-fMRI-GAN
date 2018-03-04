@@ -122,7 +122,14 @@ flattened_synthetic_all_brain_data = synthetic_all_brain_data.reshape(synthetic_
 # Convert tags into class values using custom encoding implementation:
 class_encoded_train_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in train_brain_data_tags])
 class_encoded_test_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in test_brain_data_tags])
-class_encoded_synthetic_all_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags])
+
+# Since synthetic data was encoded differently than real data, it must be
+# 1) decoded into the raw tags
+# 2) encoded using the same method as the real data
+# 3) converted into a class number with the same method as the real data
+decoded_synthetic_brain_data_tags = [synthetic_brainpedia.decode_label(brain_data_tag) for brain_data_tag in synthetic_all_brain_data_tags]
+reencoded_synthetic_brain_data_tags = [brainpedia.encode_label(decoded_brain_data_tag) for decoded_brain_data_tag in decoded_synthetic_brain_data_tags]
+class_encoded_synthetic_all_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in reencoded_synthetic_brain_data_tags])
 
 # Train:
 print("Training SVMs...")
