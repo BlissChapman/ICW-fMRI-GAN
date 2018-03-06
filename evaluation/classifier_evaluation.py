@@ -79,9 +79,9 @@ train_generator = Brainpedia.batch_generator(train_brain_data, train_brain_data_
 synthetic_train_generator = Brainpedia.batch_generator(synthetic_brain_data, synthetic_brain_data_tags, BATCH_SIZE, CUDA)
 
 # Build mixed data generator:
-mixed_50_brain_data = np.concatenate((train_brain_data, synthetic_brain_data))
-mixed_50_brain_data_tags = np.concatenate((train_brain_data_tags, synthetic_brain_data_tags))
-mixed_50_train_generator = Brainpedia.batch_generator(mixed_50_brain_data, mixed_50_brain_data_tags, BATCH_SIZE, CUDA)
+mixed_brain_data = np.concatenate((train_brain_data, synthetic_brain_data))
+mixed_brain_data_tags = np.concatenate((train_brain_data_tags, synthetic_brain_data_tags))
+mixed_train_generator = Brainpedia.batch_generator(mixed_brain_data, mixed_brain_data_tags, BATCH_SIZE, CUDA)
 
 
 # ========== UTILS ==========
@@ -122,39 +122,39 @@ def n_hot_encode(l, n):
 results_f.write('===================== [SVM] ====================\n')
 svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 synthetic_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
-mixed_50_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
+mixed_svm_classifier = LinearSVC(multi_class='ovr', random_state=0)
 
 # Flatten data into one dimension:
 flattened_train_brain_data = train_brain_data.reshape(train_brain_data.shape[0], -1)
 flattened_test_brain_data = test_brain_data.reshape(test_brain_data.shape[0], -1)
 flattened_synthetic_brain_data = synthetic_brain_data.reshape(synthetic_brain_data.shape[0], -1)
-flattened_mixed_50_brain_data = mixed_50_brain_data.reshape(mixed_50_brain_data.shape[0], -1)
+flattened_mixed_brain_data = mixed_brain_data.reshape(mixed_brain_data.shape[0], -1)
 
 # Convert tags into class values using custom encoding implementation:
 class_encoded_train_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in train_brain_data_tags])
 class_encoded_test_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in test_brain_data_tags])
 class_encoded_synthetic_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in synthetic_brain_data_tags])
-class_encoded_mixed_50_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in mixed_50_brain_data_tags])
+class_encoded_mixed_brain_data_tags = np.array([class_from_encoding(brain_data_tag) for brain_data_tag in mixed_brain_data_tags])
 
 # Train:
 print("Training SVMs...")
 svm_classifier.fit(flattened_train_brain_data, class_encoded_train_brain_data_tags)
 synthetic_svm_classifier.fit(flattened_synthetic_brain_data, class_encoded_synthetic_brain_data_tags)
-mixed_50_svm_classifier.fit(flattened_mixed_50_brain_data, class_encoded_mixed_50_brain_data_tags)
+mixed_svm_classifier.fit(flattened_mixed_brain_data, class_encoded_mixed_brain_data_tags)
 
 # Compute accuracy:
 print("Evaluating SVMs...")
 svm_classifier_score = svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 synthetic_svm_classifier_score = synthetic_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
-mixed_50_svm_classifier_score = mixed_50_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
+mixed_svm_classifier_score = mixed_svm_classifier.score(flattened_test_brain_data, class_encoded_test_brain_data_tags)
 
 # Save SVM results:
 print("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%".format(100 * svm_classifier_score))
 print("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%".format(100 * synthetic_svm_classifier_score))
-print("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n".format(100 * mixed_50_svm_classifier_score))
+print("MIXED SVM TEST ACCURACY: {0:.2f}%\n".format(100 * mixed_svm_classifier_score))
 results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100 * svm_classifier_score))
 results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100 * synthetic_svm_classifier_score))
-results_f.write("MIXED 50 SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_50_svm_classifier_score))
+results_f.write("MIXED SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_svm_classifier_score))
 
 
 # ========== NEURAL NETWORKS ==========
@@ -230,18 +230,18 @@ for training_step in range(1, TRAINING_STEPS + 1):
     synthetic_labels_batch = Variable(synthetic_labels_batch)
 
     # Retrieve [REAL + SYNTHETIC] brain image data batch:
-    mixed_50_brain_img_data_batch, mixed_50_labels_batch = next(mixed_50_train_generator)
-    mixed_50_brain_img_data_batch = Variable(mixed_50_brain_img_data_batch)
-    mixed_50_labels_batch = Variable(mixed_50_labels_batch)
+    mixed_brain_img_data_batch, mixed_labels_batch = next(mixed_train_generator)
+    mixed_brain_img_data_batch = Variable(mixed_brain_img_data_batch)
+    mixed_labels_batch = Variable(mixed_labels_batch)
 
     # Train classifiers:
     nn_classifier_loss = classifiers[0].train(brain_img_data_batch, labels_batch)
     nn_classifier_synthetic_loss = classifiers[1].train(synthetic_brain_img_data_batch, synthetic_labels_batch)
-    nn_classifier_mixed_50_loss = classifiers[2].train(mixed_50_brain_img_data_batch, mixed_50_labels_batch)
+    nn_classifier_mixed_loss = classifiers[2].train(mixed_brain_img_data_batch, mixed_labels_batch)
 
     classifier_running_losses[0] += nn_classifier_loss.data[0]
     classifier_running_losses[1] += nn_classifier_synthetic_loss.data[0]
-    classifier_running_losses[2] += nn_classifier_mixed_50_loss.data[0]
+    classifier_running_losses[2] += nn_classifier_mixed_loss.data[0]
 
     # Visualization:
     if training_step % VISUALIZATION_INTERVAL == 0:
@@ -254,11 +254,11 @@ for training_step in range(1, TRAINING_STEPS + 1):
         print("===== TRAINING STEP {0} / {1} =====".format(training_step, TRAINING_STEPS))
         print("NN CLASSIFIER LOSS:                        {0}".format(classifier_running_losses[0]))
         print("NN SYNTHETIC CLASSIFIER LOSS:              {0}".format(classifier_running_losses[1]))
-        print("NN MIXED 50 CLASSIFIER LOSS:               {0}\n".format(classifier_running_losses[2]))
+        print("NN MIXED CLASSIFIER LOSS:                  {0}\n".format(classifier_running_losses[2]))
 
         print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * accuracies[0]))
         print("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * accuracies[1]))
-        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n\n".format(100.0 * accuracies[2]))
+        print("NN MIXED CLASSIFIER TEST ACCURACY:         {0:.2f}%\n\n".format(100.0 * accuracies[2]))
 
         # Loss histories
         for i in range(num_classifiers):
@@ -275,11 +275,11 @@ for training_step in range(1, TRAINING_STEPS + 1):
         # Save model at checkpoint
         torch.save(classifiers[0].state_dict(), "{0}nn_classifier".format(args.output_dir))
         torch.save(classifiers[1].state_dict(), "{0}synthetic_nn_classifier".format(args.output_dir))
-        torch.save(classifiers[2].state_dict(), "{0}mixed_50_nn_classifier".format(args.output_dir))
+        torch.save(classifiers[2].state_dict(), "{0}mixed_nn_classifier".format(args.output_dir))
 
 
 # Save final NN classifier results to results_f:
 results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * accuracies[0]))
 results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * accuracies[1]))
-results_f.write("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n".format(100.0 * accuracies[2]))
+results_f.write("NN MIXED CLASSIFIER TEST ACCURACY:         {0:.2f}%\n".format(100.0 * accuracies[2]))
 results_f.close()
