@@ -268,7 +268,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
         Plot.plot_histories(classifier_losses,
                             ['[REAL] Loss', '[SYNTHETIC] Loss', '[REAL + SYNTHETIC] Loss'],
                             "{0}loss_histories".format(args.output_dir))
-        Plot.plot_histories(accuracies,
+        Plot.plot_histories(classifier_accuracies,
                             ['[REAL] Test Accuracy', '[SYNTHETIC] Test Accuracy', '[REAL + SYNTHETIC] Test Accuracy'],
                             "{0}accuracy_histories".format(args.output_dir))
 
@@ -278,10 +278,8 @@ for training_step in range(1, TRAINING_STEPS + 1):
         torch.save(classifiers[2].state_dict(), "{0}mixed_50_nn_classifier".format(args.output_dir))
 
 
-# Svae final NN classifier results to results_f:
-results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * nn_test_accuracy))
-results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * nn_test_synthetic_accuracy))
-results_f.write("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n".format(100.0 * nn_test_mixed_50_accuracy))
-results_f.write("RANDOM CLASSIFIER TEST ACCURACY:           {0:.2f}%\n".format(100.0 * random_test_accuracy))
-results_f.write("PERCENT TEST SAME GUESSES:                 {0:.2f}%\n".format(100.0 * fraction_test_same_guesses))
+# Save final NN classifier results to results_f:
+results_f.write("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%\n".format(100.0 * accuracies[0]))
+results_f.write("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%\n".format(100.0 * accuracies[1]))
+results_f.write("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n".format(100.0 * accuracies[2]))
 results_f.close()
