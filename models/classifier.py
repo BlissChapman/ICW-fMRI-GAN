@@ -13,9 +13,13 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
 
         self.conv_1 = nn.Conv3d(1, dimensionality, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2))
+        self.dropout_1 = nn.Dropout(0.3)
         self.conv_2 = nn.Conv3d(dimensionality, 2 * dimensionality, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(1, 1, 1))
+        self.dropout_2 = nn.Dropout(0.3)
         self.conv_3 = nn.Conv3d(2 * dimensionality, 4 * dimensionality, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 1, 2))
+        self.dropout_3 = nn.Dropout(0.3)
         self.fc_1 = nn.Linear((2 * 2 * 2) * 4 * dimensionality, 128)
+        self.dropout_4 = nn.Dropout(0.3)
         self.fc_2 = nn.Linear(128, num_classes)
         self.softmax = nn.Softmax(dim=1)
 
@@ -33,24 +37,29 @@ class Classifier(nn.Module):
         # Conv 1
         out = self.conv_1(out)
         out = F.leaky_relu(out, inplace=True)
+        out = self.dropout_1(out)
 
         # Conv 2
         out = self.conv_2(out)
         out = F.leaky_relu(out, inplace=True)
+        out = self.dropout_2(out)
 
         # Conv 3
         out = self.conv_3(out)
         out = F.leaky_relu(out, inplace=True)
+        out = self.dropout_3(out)
 
         # Linear and reshape
         out = out.view(out.shape[0], (2 * 2 * 2) * 4 * self.dimensionality)
         out = self.fc_1(out)
+        out = self.dropout_4(out)
+
         out = self.fc_2(out)
 
         # Softmax
         if not train:
             out = F.softmax(out, dim=1)
-        
+
         return out
 
     def train(self, real_images, labels):
