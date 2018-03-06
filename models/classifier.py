@@ -47,6 +47,9 @@ class Classifier(nn.Module):
         out = self.fc_1(out)
         out = self.fc_2(out)
 
+        # Softmax
+        out = F.softmax(out)
+        
         return out
 
     def train(self, real_images, labels):

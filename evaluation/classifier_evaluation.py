@@ -258,7 +258,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
 
         print("NN CLASSIFIER TEST ACCURACY:               {0:.2f}%".format(100.0 * accuracies[0]))
         print("NN SYNTHETIC CLASSIFIER TEST ACCURACY:     {0:.2f}%".format(100.0 * accuracies[1]))
-        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n\n%".format(100.0 * accuracies[2]))
+        print("NN MIXED 50 CLASSIFIER TEST ACCURACY:      {0:.2f}%\n\n".format(100.0 * accuracies[2]))
 
         # Loss histories
         for i in range(num_classifiers):

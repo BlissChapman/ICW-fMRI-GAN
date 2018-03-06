@@ -74,7 +74,7 @@ brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
                         cache_dir=args.train_data_dir_cache,
                         scale=DOWNSAMPLE_SCALE)
 all_brain_data, all_brain_data_tags = brainpedia.all_data()
-brainpedia_generator = brainpedia.batch_generator(all_brain_data, all_brain_data_tags, BATCH_SIZE, CUDA)
+brainpedia_generator = Brainpedia.batch_generator(all_brain_data, all_brain_data_tags, BATCH_SIZE, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
 
 # ========== Models ==========
