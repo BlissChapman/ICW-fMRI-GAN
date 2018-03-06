@@ -27,7 +27,7 @@ class Classifier(nn.Module):
         if cudaEnabled:
             self.cuda()
 
-    def forward(self, images):
+    def forward(self, images, train=False):
         out = images.view(-1, 1, 13, 15, 11)
 
         # Conv 1
@@ -48,7 +48,8 @@ class Classifier(nn.Module):
         out = self.fc_2(out)
 
         # Softmax
-        out = F.softmax(out)
+        if not train:
+            out = F.softmax(out, dim=1)
         
         return out
 
@@ -57,7 +58,7 @@ class Classifier(nn.Module):
         self.zero_grad()
 
         # Classifier output:
-        classifier_output = self.forward(real_images)
+        classifier_output = self.forward(real_images, train=True)
 
         # Compute classifier loss:
         classifier_loss = F.binary_cross_entropy_with_logits(classifier_output, labels)
