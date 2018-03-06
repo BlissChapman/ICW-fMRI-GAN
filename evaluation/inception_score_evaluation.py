@@ -64,6 +64,9 @@ def inception_score(path_to_generated_imgs_dir,
     all_generated_brain_data, all_generated_brain_data_tags = generated_brainpedia.all_data()
     all_generated_brain_data = Variable(torch.Tensor(all_generated_brain_data))
 
+    if cuda_enabled:
+        all_generated_brain_data = all_generated_brain_data.cuda()
+
     # Load classifier model
     classifier = Classifier(dimensionality=classifier_dimensionality,
                             num_classes=generated_brain_data_tag_shape[0],
