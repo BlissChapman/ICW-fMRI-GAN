@@ -46,6 +46,8 @@ results_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
 results_f.write('=====================================================\n\n\n')
 
 # ========== INCEPTION SCORE ==========
+
+
 def inception_score(path_to_generated_imgs_dir,
                     path_to_generated_imgs_dir_cache,
                     downsample_scale,
