@@ -53,8 +53,8 @@ brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
                         cache_dir=args.train_data_dir_cache,
                         scale=DOWNSAMPLE_SCALE)
 all_brain_data, all_brain_data_tags = brainpedia.all_data()
-brainpedia_generator = Brainpedia.batch_generator(all_brain_data, all_brain_data_tags, 1, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
+unique_brain_data_tags = np.unique(all_brain_data_tags, axis=0)
 
 # ========== Models ==========
 generator = models.ICW_FMRI_GAN.Generator(input_size=NOISE_SAMPLE_LENGTH,
@@ -67,14 +67,13 @@ generator.load_state_dict(torch.load(args.generator_state_dict_path))
 
 # ========== Sample Generation ==========
 for step in range(args.num_samples):
-    # Draw batch of real data and labels from brainpedia
-    real_brain_img_data_batch, labels_batch = next(brainpedia_generator)
-    real_brain_img_data_batch = Variable(real_brain_img_data_batch)
-    labels_batch = Variable(labels_batch)
+    # Generate samples uniformly across classes:
+    conditioning_label = unique_brain_data_tags[step % len(unique_brain_data_tags)]
+    conditioning_label = Variable(torch.Tensor(np.expand_dims(conditioning_label, 0)))
 
     # Generate synthetic brain image data with the same label as the real data
-    noise_sample = Variable(utils.utils.noise(size=(labels_batch.shape[0], NOISE_SAMPLE_LENGTH), cuda=CUDA))
-    sythetic_brain_img_data = generator(noise_sample, labels_batch)
+    noise_sample = Variable(utils.utils.noise(size=(1, NOISE_SAMPLE_LENGTH), cuda=CUDA))
+    sythetic_brain_img_data = generator(noise_sample, conditioning_label)
 
     # Upsample synthetic brain image data
     synthetic_sample_data = sythetic_brain_img_data[0].cpu().data.numpy().squeeze()
@@ -87,7 +86,7 @@ for step in range(args.num_samples):
     # Save synthetic brain image metadata
     with open("{0}image_{1}_metadata.json".format(args.output_dir, step), 'w') as metadata_f:
         tags = ""
-        for sample_label in brainpedia.decode_label(labels_batch.data[0]):
+        for sample_label in brainpedia.decode_label(conditioning_label.data[0]):
             tags += sample_label + ','
 
         json.dump({'tags': tags}, metadata_f)
