@@ -69,7 +69,10 @@ generator.load_state_dict(torch.load(args.generator_state_dict_path))
 for step in range(args.num_samples):
     # Generate samples uniformly across classes:
     conditioning_label = unique_brain_data_tags[step % len(unique_brain_data_tags)]
-    conditioning_label = Variable(torch.Tensor(np.expand_dims(conditioning_label, 0)))
+    conditioning_label = torch.Tensor(np.expand_dims(conditioning_label, 0)) 
+    if CUDA:
+        conditioning_label = conditioning_label.cuda()
+    conditioning_label = Variable(conditioning_label)
 
     # Generate synthetic brain image data with the same label as the real data
     noise_sample = Variable(utils.utils.noise(size=(1, NOISE_SAMPLE_LENGTH), cuda=CUDA))
