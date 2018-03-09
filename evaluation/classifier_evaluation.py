@@ -40,6 +40,7 @@ os.makedirs(args.output_dir)
 
 # ========== HYPERPARAMETERS ==========
 DOWNSAMPLE_SCALE = 0.25
+MULTI_TAG_LABEL_ENCODING = False
 TRAINING_STEPS = 50000
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
@@ -48,6 +49,7 @@ VISUALIZATION_INTERVAL = 1000
 results_f = open(args.output_dir + 'results.txt', 'w')
 results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 results_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
+results_f.write('MULTI_TAG_LABEL_ENCODING: {0}\n'.format(MULTI_TAG_LABEL_ENCODING))
 results_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
 results_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
 results_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
@@ -57,20 +59,22 @@ results_f.write('VISUALIZATION_INTERVAL: {0}\n\n\n'.format(VISUALIZATION_INTERVA
 # Real data:
 brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
                         cache_dir=args.train_data_dir_cache,
-                        scale=DOWNSAMPLE_SCALE)
+                        scale=DOWNSAMPLE_SCALE,
+                        multi_tag_label_encoding=MULTI_TAG_LABEL_ENCODING)
 train_brain_data, train_brain_data_tags, test_brain_data, test_brain_data_tags = brainpedia.train_test_split()
 
 # Synthetic data:
 synthetic_brainpedia = Brainpedia(data_dirs=[args.synthetic_data_dir],
                                   cache_dir=args.synthetic_data_dir_cache,
-                                  scale=DOWNSAMPLE_SCALE)
+                                  scale=DOWNSAMPLE_SCALE,
+                                  multi_tag_label_encoding=MULTI_TAG_LABEL_ENCODING)
 synthetic_brain_data, synthetic_brain_data_tags = synthetic_brainpedia.all_data()
 
 # Since synthetic data was encoded differently than real data, it must be
 # 1) decoded into the raw tags
 # 2) re-encoded using the same method as the real data
-decoded_synthetic_brain_data_tags = [synthetic_brainpedia.decode_label(brain_data_tag) for brain_data_tag in synthetic_brain_data_tags]
-synthetic_brain_data_tags = [brainpedia.encode_label(decoded_brain_data_tag) for decoded_brain_data_tag in decoded_synthetic_brain_data_tags]
+decoded_synthetic_brain_data_tags = [synthetic_brainpedia.preprocessor.decode_label(brain_data_tag) for brain_data_tag in synthetic_brain_data_tags]
+synthetic_brain_data_tags = [brainpedia.preprocessor.encode_label(decoded_brain_data_tag) for decoded_brain_data_tag in decoded_synthetic_brain_data_tags]
 
 # Build real data generator:
 train_generator = Brainpedia.batch_generator(train_brain_data, train_brain_data_tags, BATCH_SIZE, CUDA)
