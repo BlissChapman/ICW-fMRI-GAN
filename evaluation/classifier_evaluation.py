@@ -160,7 +160,6 @@ results_f.write("SVM CLASSIFIER TEST ACCURACY: {0:.2f}%\n".format(100 * svm_clas
 results_f.write("SYNTHETIC SVM TEST ACCURACY: {0:.2f}%\n".format(100 * synthetic_svm_classifier_score))
 results_f.write("MIXED SVM TEST ACCURACY: {0:.2f}%\n\n".format(100 * mixed_svm_classifier_score))
 
-
 # ========== NEURAL NETWORKS ==========
 results_f.write('===================== [Neural Networks] ====================\n')
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
@@ -192,14 +191,14 @@ def compute_accuracies(classifiers, brain_data, brain_data_tags):
     total_tests = len(brain_data_tags)
 
     for i in range(total_tests):
-        true_tags = brainpedia.decode_label(brain_data_tags[i])
-        num_tags = len(true_tags)
+        true_tags = brainpedia.preprocessor.decode_label(brain_data_tags[i])
+        num_tags = len(true_tags) if MULTI_TAG_LABEL_ENCODING else 1
 
         # n-hot encode predictions
         classifier_predicted_tags = [n_hot_encode(predictions[i], num_tags) for predictions in classifier_predictions]
 
         # decode predictions
-        classifier_predicted_tags = [brainpedia.decode_label(predicted_tags) for predicted_tags in classifier_predicted_tags]
+        classifier_predicted_tags = [brainpedia.preprocessor.decode_label(predicted_tags) for predicted_tags in classifier_predicted_tags]
 
         # prepare for comparison
         true_tags = set(true_tags)
