@@ -9,17 +9,27 @@ class Brainpedia:
     """
     """
 
-    def __init__(self, data_dirs, cache_dir, scale):
+    def __init__(self, data_dirs, cache_dir, scale, multi_tag_label_encoding):
         self.data_dirs = data_dirs
         self.cache_dir = cache_dir
+        self.multi_tag_label_encoding = multi_tag_label_encoding
+
+        multi_tag_str = 'multi_tag' if multi_tag_label_encoding else 'combined_tag'
+        brain_data_filename = "brain_data_{0}_{1}.pkl".format(multi_tag_str, scale)
+        brain_data_mask_filename = "brain_data_mask_{0}_{1}.pkl".format(multi_tag_str, scale)
+        brain_data_tags_filename = "brain_data_tags_{0}_{1}.pkl".format(multi_tag_str, scale)
+        brain_data_tags_encoding_filename = "brain_data_tags_encoding_{0}_{1}.pkl".format(multi_tag_str, scale)
+        brain_data_tags_decoding_filename = "brain_data_tags_decoding_{0}_{1}.pkl".format(multi_tag_str, scale)
+
         self.preprocessor = Preprocessor(data_dirs=self.data_dirs,
                                          output_dir=self.cache_dir,
                                          scale=scale,
-                                         brain_data_filename="brain_data_{0}.pkl".format(scale),
-                                         brain_data_mask_filename="brain_data_mask_{0}.pkl".format(scale),
-                                         brain_data_tags_filename="brain_data_tags_{0}.pkl".format(scale),
-                                         brain_data_tags_encoding_filename="brain_data_tags_encoding_{0}.pkl".format(scale),
-                                         brain_data_tags_decoding_filename="brain_data_tags_decoding_{0}.pkl".format(scale))
+                                         multi_tag_label_encoding=multi_tag_label_encoding,
+                                         brain_data_filename=brain_data_filename,
+                                         brain_data_mask_filename=brain_data_mask_filename,
+                                         brain_data_tags_filename=brain_data_tags_filename,
+                                         brain_data_tags_encoding_filename=brain_data_tags_encoding_filename,
+                                         brain_data_tags_decoding_filename=brain_data_tags_decoding_filename)
 
     def all_data(self):
         # Load data from preprocessed binary files.
@@ -86,20 +96,3 @@ class Brainpedia:
         brain_data = self.preprocessor.brain_data()
         brain_data_tags = self.preprocessor.brain_data_tags()
         return (brain_data[0].shape, brain_data_tags[0].shape)
-
-    def encode_label(self, tags):
-        brain_data_tag_encoding_map = self.preprocessor.brain_data_tags_encoding()
-        tags_encoding = np.zeros(len(brain_data_tag_encoding_map.items()))
-        for tag in tags:
-            tag_one_hot_encoding_idx = brain_data_tag_encoding_map[tag]
-            tags_encoding[tag_one_hot_encoding_idx] = 1
-        return tags_encoding
-
-    def decode_label(self, encoded_label):
-        brain_data_tag_decoding_map = self.preprocessor.brain_data_tags_decoding()
-        tags = []
-        for i in range(len(encoded_label)):
-            if encoded_label[i] == 1.0:
-                tag = brain_data_tag_decoding_map[i]
-                tags.append(tag)
-        return tags

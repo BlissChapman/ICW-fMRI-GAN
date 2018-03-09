@@ -37,18 +37,20 @@ os.makedirs(MODEL_OUTPUT_DIR)
 
 # ========== Hyperparameters ==========
 DOWNSAMPLE_SCALE = 0.25
+MULTI_TAG_LABEL_ENCODING = False
 TRAINING_STEPS = 200000
 BATCH_SIZE = 50
 MODEL_DIMENSIONALITY = 64
 CONDITONING_DIMENSIONALITY = 5
 CRITIC_UPDATES_PER_GENERATOR_UPDATE = 1
 LAMBDA = 10
-VISUALIZATION_INTERVAL = 500
+VISUALIZATION_INTERVAL = 1000
 NOISE_SAMPLE_LENGTH = 128
 
 description_f = open(args.output_dir + 'description.txt', 'w')
 description_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 description_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
+description_f.write('MULTI_TAG_LABEL_ENCODING: {0}\n'.format(MULTI_TAG_LABEL_ENCODING))
 description_f.write('TRAINING_STEPS: {0}\n'.format(TRAINING_STEPS))
 description_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
 description_f.write('MODEL_DIMENSIONALITY: {0}\n'.format(MODEL_DIMENSIONALITY))
@@ -72,7 +74,8 @@ if CUDA:
 # ========== Data ==========
 brainpedia = Brainpedia(data_dirs=[args.train_data_dir],
                         cache_dir=args.train_data_dir_cache,
-                        scale=DOWNSAMPLE_SCALE)
+                        scale=DOWNSAMPLE_SCALE,
+                        multi_tag_label_encoding=MULTI_TAG_LABEL_ENCODING)
 all_brain_data, all_brain_data_tags = brainpedia.all_data()
 brainpedia_generator = Brainpedia.batch_generator(all_brain_data, all_brain_data_tags, BATCH_SIZE, CUDA)
 brain_data_shape, brain_data_tag_shape = brainpedia.sample_shapes()
@@ -149,7 +152,7 @@ for training_step in range(1, TRAINING_STEPS + 1):
         torch.save(critic.state_dict(), "{0}critic".format(MODEL_OUTPUT_DIR))
 
         # Upsample and save samples
-        sample_tags = brainpedia.decode_label(labels_batch.data[0])
+        sample_tags = brainpedia.preprocessor.decode_label(labels_batch.data[0])
         real_sample_data = real_brain_img_data_batch[0].cpu().data.numpy().squeeze()
         synthetic_sample_data = synthetic_brain_img_data_batch[0].cpu().data.numpy().squeeze()
         upsampled_real_brain_img = invert_preprocessor_scaling(real_sample_data, brainpedia.preprocessor)
