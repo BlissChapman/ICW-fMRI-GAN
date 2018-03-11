@@ -41,10 +41,10 @@ os.makedirs(args.output_dir)
 # ========== HYPERPARAMETERS ==========
 DOWNSAMPLE_SCALE = 0.25
 MULTI_TAG_LABEL_ENCODING = False
-TRAINING_STEPS = 50000
+TRAINING_STEPS = 25000
 MODEL_DIMENSIONALITY = 64
 BATCH_SIZE = 16
-VISUALIZATION_INTERVAL = 1000
+VISUALIZATION_INTERVAL = 500
 
 results_f = open(args.output_dir + 'results.txt', 'w')
 results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
