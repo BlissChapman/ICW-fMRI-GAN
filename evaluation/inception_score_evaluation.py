@@ -35,12 +35,14 @@ os.makedirs(args.output_dir)
 
 # ========== HYPERPARAMETERS ==========
 DOWNSAMPLE_SCALE = 0.25
+MULTI_TAG_LABEL_ENCODING = False
 CLASSIFIER_DIMENSIONALITY = 64
 BATCH_SIZE = 16
 
 results_f = open(args.output_dir + 'results.txt', 'w')
 results_f.write('DATE: {0}\n\n'.format(datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')))
 results_f.write('DOWNSAMPLE_SCALE: {0}\n'.format(DOWNSAMPLE_SCALE))
+results_f.write('MULTI_TAG_LABEL_ENCODING: {0}\n'.format(MULTI_TAG_LABEL_ENCODING))
 results_f.write('CLASSIFIER_DIMENSIONALITY: {0}\n'.format(CLASSIFIER_DIMENSIONALITY))
 results_f.write('BATCH_SIZE: {0}\n'.format(BATCH_SIZE))
 results_f.write('=====================================================\n\n\n')
@@ -59,7 +61,8 @@ def inception_score(path_to_generated_imgs_dir,
     # Set up data
     generated_brainpedia = Brainpedia(data_dirs=[path_to_generated_imgs_dir],
                                       cache_dir=path_to_generated_imgs_dir_cache,
-                                      scale=downsample_scale)
+                                      scale=downsample_scale,
+                                      multi_tag_label_encoding=MULTI_TAG_LABEL_ENCODING)
     generated_brain_data_shape, generated_brain_data_tag_shape = generated_brainpedia.sample_shapes()
     all_generated_brain_data, all_generated_brain_data_tags = generated_brainpedia.all_data()
     all_generated_brain_data = Variable(torch.Tensor(all_generated_brain_data))
