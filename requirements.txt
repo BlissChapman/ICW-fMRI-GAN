@@ -6,3 +6,4 @@ pandas
 ply
 scipy
 sklearn
+torch
